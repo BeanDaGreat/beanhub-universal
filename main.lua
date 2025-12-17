@@ -103,8 +103,19 @@ local EspConnections = {}
 local EspObjects = {}
 local GuiFolder = Instance.new("Folder")
 GuiFolder.Name = "OrionUniversalFolder"
-local parentGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+local parentGui
+local success, coreGui = pcall(function()
+    return game:GetService("CoreGui")
+end)
+
+if success and coreGui then
+    parentGui = coreGui
+else
+    parentGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+end
+
 GuiFolder.Parent = parentGui
+
 
 
 local function addConnection(conn, bucket)
