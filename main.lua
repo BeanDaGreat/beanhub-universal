@@ -110,7 +110,7 @@ titleLabel.BackgroundTransparency = 1
 titleLabel.Font = Enum.Font.GothamBlack
 titleLabel.TextSize = 20
 titleLabel.TextColor3 = themes[currentTheme].accent
-titleLabel.Text = "BEAN HUB"
+titleLabel.Text = "BEAN HUB    v3.2"
 titleLabel.ZIndex = 4
 
 local versionLabel = Instance.new("TextLabel", topBar)
