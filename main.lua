@@ -1,4 +1,4 @@
--- AMNESIA v3 Minimal Template
+
 -- Cleaned and simplified for later configuration
 
 print("Bean Hub Loaded Made By beandagreat. in discord")
