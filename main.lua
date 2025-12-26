@@ -1,486 +1,223 @@
-
--- Cleaned and simplified for later configuration
-
-print("Bean Hub Loaded Made By beandagreat. in discord")
-
+-- Services
 local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
-
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Camera = workspace.CurrentCamera
 
-local WINDOW_SIZE = Vector2.new(760, 520)
-local SCRIPT_NAME = "BeanHub"
-local SCRIPT_VERSION = "v2.6"
-
-local Theme = {
-    bg = Color3.fromRGB(12,12,16),
-    panel = Color3.fromRGB(22,22,30),
-    header = Color3.fromRGB(18,18,26),
-    accent = Color3.fromRGB(88,101,242),
-    text = Color3.fromRGB(235,238,243),
-    textDim = Color3.fromRGB(150,155,170),
-    tab = Color3.fromRGB(32,32,46),
-    tabActive = Color3.fromRGB(88,101,242),
-    separator = Color3.fromRGB(40,42,58),
+-- Settings
+local Settings = {
+    AimbotEnabled = false,
+    FOV = 150,
+    AimbotKey = Enum.UserInputType.MouseButton2,
+    HeadOffset = Vector3.new(0,0.5,0),
+    MaxDistance = 500,
+    SmoothingFactor = 1,
+    EnemyColor = Color3.fromRGB(255,170,60),
+    TargetColor = Color3.fromRGB(255,0,0),
+    HealthColor = Color3.fromRGB(0,255,0),
+    HealthTransparency = 0.5
 }
 
--- Utility: create instance
-local function create(class, props, parent)
-    local obj = Instance.new(class)
-    for k,v in pairs(props or {}) do obj[k] = v end
-    if parent then obj.Parent = parent end
-    return obj
-end
+local State = {TrackedCharacters = {}}
 
--- Kill script and GUI
-local function KillScript()
-    local gui = PlayerGui:FindFirstChild("amnesia_v3")
-    if gui then gui:Destroy() end
-    if script and script.Parent then script:Destroy() end
-end
+-- FOV circle
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Radius = Settings.FOV
+FOVCircle.Filled = false
+FOVCircle.Color = Settings.TargetColor
+FOVCircle.Thickness = 2
+FOVCircle.Visible = true
 
--- Close on Delete key
-UIS.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode == Enum.KeyCode.Delete then
-        KillScript()
-    end
-end)
+-- ESP creation
+local function makeESP(char, player)
+    if State.TrackedCharacters[char] then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
--- Root GUI
-local RootGui = create("ScreenGui", {
-    Name = "BeanHubUI",
-    ResetOnSpawn = false,
-    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-}, PlayerGui)
+    local folder = Instance.new("Folder")
+    folder.Name = "ESPVisual"
+    folder.Parent = char
 
--- Main window + shadow (simple)
-local MainWindow = create("Frame", {
-    Name = "MainWindow",
-    BackgroundColor3 = Theme.panel,
-    BorderSizePixel = 0,
-    Size = UDim2.new(0, WINDOW_SIZE.X, 0, WINDOW_SIZE.Y),
-    Position = UDim2.new(0, 40, 0, 80),
-}, RootGui)
-create("UICorner", {CornerRadius = UDim.new(0,12)}, MainWindow)
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = char
+    highlight.Parent = folder
+    highlight.Enabled = true
+    highlight.OutlineColor = Settings.EnemyColor
+    highlight.FillColor = Settings.EnemyColor
+    highlight.FillTransparency = Settings.HealthTransparency
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 
-local Header = create("Frame", {
-    BackgroundColor3 = Theme.header,
-    Size = UDim2.new(1,0,0,62),
-    Parent = MainWindow,
-})
-create("UICorner", {CornerRadius = UDim.new(0,12)}, Header)
+    local billboard = Instance.new("BillboardGui")
+    billboard.Adornee = hrp
+    billboard.Size = UDim2.new(0,150,0,40)
+    billboard.StudsOffset = Vector3.new(0,3,0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = folder
 
-create("TextLabel", {
-    Text = SCRIPT_NAME,
-    Font = Enum.Font.GothamBlack,
-    TextSize = 26,
-    TextColor3 = Theme.text,
-    BackgroundTransparency = 1,
-    Position = UDim2.new(0,16,0,8),
-    Size = UDim2.new(0.6,0,0,28),
-    TextXAlignment = Enum.TextXAlignment.Left,
-}, Header)
+    local frame = Instance.new("Frame")
+    frame.BackgroundTransparency = 1
+    frame.Size = UDim2.new(1,0,1,0)
+    frame.Parent = billboard
 
-create("TextLabel", {
-    Text = SCRIPT_VERSION,
-    Font = Enum.Font.Gotham,
-    TextSize = 14,
-    TextColor3 = Theme.textDim,
-    BackgroundTransparency = 1,
-    Position = UDim2.new(0,16,0,34),
-    Size = UDim2.new(0.6,0,0,22),
-    TextXAlignment = Enum.TextXAlignment.Left,
-}, Header)
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1,0,0.5,0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.TextScaled = true
+    nameLabel.TextColor3 = Color3.new(1,1,1)
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.Text = player.Name
+    nameLabel.Parent = frame
 
-local CloseButton = create("TextButton", {
-    Text = "×",
-    Font = Enum.Font.GothamBold,
-    TextSize = 18,
-    TextColor3 = Theme.textDim,
-    BackgroundColor3 = Color3.fromRGB(24,24,32),
-    BorderSizePixel = 0,
-    Size = UDim2.new(0,26,0,26),
-    Position = UDim2.new(1,-34,0,10),
-    AutoButtonColor = false,
-}, Header)
-create("UICorner", {CornerRadius = UDim.new(1,0)}, CloseButton)
-CloseButton.MouseButton1Click:Connect(KillScript)
+    local healthLabel = Instance.new("TextLabel")
+    healthLabel.Size = UDim2.new(1,0,0.5,0)
+    healthLabel.Position = UDim2.new(0,0,0.5,0)
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.TextScaled = true
+    healthLabel.TextColor3 = Color3.new(0,1,0)
+    healthLabel.Font = Enum.Font.Gotham
+    healthLabel.Parent = frame
 
--- Sidebar and content
-local Sidebar = create("Frame", {
-    BackgroundColor3 = Theme.panel,
-    BorderSizePixel = 0,
-    Position = UDim2.new(0,0,0,62),
-    Size = UDim2.new(0,160,1,-62),
-}, MainWindow)
-local SidebarList = create("Frame", {
-    BackgroundTransparency = 1,
-    Position = UDim2.new(0,10,0,10),
-    Size = UDim2.new(1,-20,1,-20),
-}, Sidebar)
-create("UIListLayout", {Padding = UDim.new(0,6), SortOrder = Enum.SortOrder.LayoutOrder}, SidebarList)
-
-local ContentHolder = create("Frame", {
-    BackgroundColor3 = Theme.panel,
-    BorderSizePixel = 0,
-    Position = UDim2.new(0,160,0,62),
-    Size = UDim2.new(1,-160,1,-62),
-}, MainWindow)
-create("UICorner", {CornerRadius = UDim.new(0,12)}, ContentHolder)
-
-local Content = create("Frame", {
-    BackgroundTransparency = 1,
-    Position = UDim2.new(0,12,0,12),
-    Size = UDim2.new(1,-24,1,-24),
-}, ContentHolder)
-
--- Tab factory
-local Tabs = {}
-local function createTabButton(name)
-    local btn = create("TextButton", {
-        Text = name,
-        Font = Enum.Font.GothamBold,
-        TextSize = 17,
-        TextColor3 = Theme.textDim,
-        BackgroundColor3 = Theme.tab,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1,0,0,40),
-        AutoButtonColor = false,
-    }, SidebarList)
-    create("UICorner", {CornerRadius = UDim.new(0,10)}, btn)
-    return btn
-end
-
-local function createPage()
-    local page = create("Frame", {
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1,0,1,0),
-        Visible = false,
-        Parent = Content,
-    })
-    local layout = create("UIListLayout", {Padding = UDim.new(0,10), SortOrder = Enum.SortOrder.LayoutOrder}, page)
-    layout.FillDirection = Enum.FillDirection.Vertical
-    return page
-end
-
--- Define tabs
-local tabNames = {"Player","Visuals","Info","Configs"}
-for _, name in ipairs(tabNames) do
-    Tabs[name] = { Button = createTabButton(name), Page = createPage() }
-end
-
-local function setTabActive(name)
-    for k,v in pairs(Tabs) do
-        if k == name then
-            v.Button.BackgroundColor3 = Theme.tabActive
-            v.Button.TextColor3 = Theme.text
-            v.Page.Visible = true
-        else
-            v.Button.BackgroundColor3 = Theme.tab
-            v.Button.TextColor3 = Theme.textDim
-            v.Page.Visible = false
-        end
-    end
-end
-
-for name, data in pairs(Tabs) do
-    data.Button.MouseButton1Click:Connect(function() setTabActive(name) end)
-end
-setTabActive("Player")
-
--- UI factories (simple)
-local function createSlider(parent, title, minVal, maxVal, defaultVal)
-    local frame = create("Frame", {BackgroundTransparency = 1, Size = UDim2.new(1,0,0,42)}, parent)
-    create("TextLabel", {
-        Text = title,
-        Font = Enum.Font.GothamBold,
-        TextSize = 16,
-        TextColor3 = Theme.text,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(0.35,0,1,0),
-        TextXAlignment = Enum.TextXAlignment.Left,
-    }, frame)
-
-    local valueBox = create("TextBox", {
-        Text = tostring(defaultVal),
-        Font = Enum.Font.GothamBold,
-        TextSize = 16,
-        TextColor3 = Theme.text,
-        BackgroundColor3 = Theme.tab,
-        BorderSizePixel = 0,
-        Size = UDim2.new(0,60,0,28),
-        Position = UDim2.new(1,-150,0.5,-14),
-        ClearTextOnFocus = false,
-    }, frame)
-    create("UICorner", {CornerRadius = UDim.new(0,8)}, valueBox)
-
-    -- Minimal slider visual (no dragging math here)
-    local sliderBg = create("Frame", {
-        BackgroundColor3 = Theme.separator,
-        BorderSizePixel = 0,
-        Size = UDim2.new(0.50,-10,0,6),
-        Position = UDim2.new(0.29,0,0.5,-3),
-    }, frame)
-    create("UICorner", {CornerRadius = UDim.new(1,0)}, sliderBg)
-
-    local current = defaultVal
-    local function Set(v)
-        v = math.clamp(tonumber(v) or defaultVal, minVal, maxVal)
-        current = v
-        valueBox.Text = tostring(v)
-    end
-
-    valueBox.FocusLost:Connect(function()
-        Set(valueBox.Text)
-    end)
-
-    Set(defaultVal)
-    return { Get = function() return current end, Set = Set }
-end
-
-local function createToggle(parent, title)
-    local frame = create("Frame", {BackgroundTransparency = 1, Size = UDim2.new(1,0,0,36)}, parent)
-    create("TextLabel", {
-        Text = title,
-        Font = Enum.Font.GothamBold,
-        TextSize = 16,
-        TextColor3 = Theme.text,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(0.6,0,1,0),
-        TextXAlignment = Enum.TextXAlignment.Left,
-    }, frame)
-
-    local btn = create("TextButton", {
-        Text = "OFF",
-        Font = Enum.Font.GothamBold,
-        TextSize = 16,
-        TextColor3 = Theme.text,
-        BackgroundColor3 = Theme.tab,
-        BorderSizePixel = 0,
-        Size = UDim2.new(0,80,0,28),
-        Position = UDim2.new(1,-90,0.5,-14),
-        AutoButtonColor = false,
-    }, frame)
-    create("UICorner", {CornerRadius = UDim.new(0,8)}, btn)
-
-    btn.MouseButton1Click:Connect(function()
-        local on = btn.Text == "OFF"
-        btn.Text = on and "ON" or "OFF"
-        btn.BackgroundColor3 = on and Theme.accent or Theme.tab
-    end)
-
-    return btn
-end
-
-local function createColorPicker(parent, title, defaultColor)
-    local frame = create("Frame", {BackgroundTransparency = 1, Size = UDim2.new(1,0,0,40)}, parent)
-    local button = create("TextButton", {
-        Text = title,
-        Font = Enum.Font.GothamBold,
-        TextSize = 16,
-        TextColor3 = Theme.text,
-        BackgroundColor3 = Theme.tab,
-        BorderSizePixel = 0,
-        Size = UDim2.new(0,220,0,32),
-        AutoButtonColor = false,
-    }, frame)
-    create("UICorner", {CornerRadius = UDim.new(0,8)}, button)
-
-    local colorBox = create("Frame", {
-        BackgroundColor3 = defaultColor or Theme.accent,
-        BorderSizePixel = 0,
-        Size = UDim2.new(0,22,0,22),
-        Position = UDim2.new(1,-28,0.5,-11),
-        Parent = button,
-    })
-    create("UICorner", {CornerRadius = UDim.new(0,6)}, colorBox)
-
-    -- Simple toggle popup (no HSV picker)
-    local popup = create("Frame", {
-        BackgroundColor3 = Theme.panel,
-        BorderSizePixel = 0,
-        Size = UDim2.new(0,160,0,60),
-        Visible = false,
-        Position = UDim2.new(0,0,1,6),
-        Parent = frame,
-    })
-    create("UICorner", {CornerRadius = UDim.new(0,10)}, popup)
-
-    local preset = create("TextButton", {
-        Text = "Set Random",
-        Font = Enum.Font.Gotham,
-        TextSize = 14,
-        TextColor3 = Theme.text,
-        BackgroundColor3 = Theme.tab,
-        Size = UDim2.new(1,-10,0,28),
-        Position = UDim2.new(0,5,0,16),
-        Parent = popup,
-    })
-    create("UICorner", {CornerRadius = UDim.new(0,6)}, preset)
-
-    preset.MouseButton1Click:Connect(function()
-        local c = Color3.fromHSV(math.random(), 0.8, 0.9)
-        colorBox.BackgroundColor3 = c
-        popup.Visible = false
-    end)
-
-    button.MouseButton1Click:Connect(function()
-        popup.Visible = not popup.Visible
-    end)
-
-    return {
-        Get = function() return colorBox.BackgroundColor3 end,
-        Set = function(c) colorBox.BackgroundColor3 = c end
+    State.TrackedCharacters[char] = {
+        Highlight = highlight,
+        Billboard = billboard,
+        HealthLabel = healthLabel
     }
 end
 
--- Example controls on Player tab
-local speedSlider = createSlider(Tabs.Player.Page, "Speed", 0, 72, 16)
-local jumpSlider  = createSlider(Tabs.Player.Page, "Jump", 0, 200, 50)
-local shiftToggle = createToggle(Tabs.Player.Page, "Shift run")
-
--- Visuals tab examples
-local espToggle = createToggle(Tabs.Visuals.Page, "ESP")
-local espColor = createColorPicker(Tabs.Visuals.Page, "ESP Color", Color3.fromRGB(255,0,0))
-
--- Info box
-local infoBox = create("Frame", {
-    BackgroundColor3 = Theme.tab,
-    BorderSizePixel = 0,
-    Size = UDim2.new(1,-10,0,90),
-    Parent = Tabs.Info.Page,
-})
-create("UICorner", {CornerRadius = UDim.new(0,10)}, infoBox)
-create("TextLabel", {
-    Text = "Info\nTime: --:--\nExecutor: --",
-    Font = Enum.Font.GothamBold,
-    TextSize = 16,
-    TextColor3 = Theme.text,
-    BackgroundTransparency = 1,
-    Size = UDim2.new(1,-20,1,-10),
-    Position = UDim2.new(0,10,0,5),
-    TextXAlignment = Enum.TextXAlignment.Left,
-    TextYAlignment = Enum.TextYAlignment.Top,
-}, infoBox)
-
--- Config system (simple in-memory + optional file save)
-local function BuildConfigTable()
-    return {
-        speed = speedSlider.Get(),
-        jump = jumpSlider.Get(),
-        shift = shiftToggle.Text == "ON",
-        esp = espToggle.Text == "ON",
-        espColor = {espColor.Get().R, espColor.Get().G, espColor.Get().B},
-    }
-end
-
-local function ApplyConfigTable(cfg)
-    if not cfg then return end
-    if cfg.speed then speedSlider.Set(cfg.speed) end
-    if cfg.jump then jumpSlider.Set(cfg.jump) end
-    local function applyToggle(btn, val)
-        btn.Text = val and "ON" or "OFF"
-        btn.BackgroundColor3 = val and Theme.accent or Theme.tab
-    end
-    applyToggle(shiftToggle, cfg.shift)
-    applyToggle(espToggle, cfg.esp)
-    if cfg.espColor then
-        espColor.Set(Color3.new(cfg.espColor[1], cfg.espColor[2], cfg.espColor[3]))
+local function rmESP(char)
+    local d = State.TrackedCharacters[char]
+    if d then
+        if d.Highlight and d.Highlight.Parent then d.Highlight.Parent:Destroy() end
+        State.TrackedCharacters[char] = nil
     end
 end
 
--- Optional file helpers (use only if executor supports writefile/readfile)
-local function safeWrite(path, data)
-    if type(writefile) ~= "function" then return false end
-    local ok, err = pcall(function() writefile(path, data) end)
-    return ok, err
-end
-local function safeRead(path)
-    if type(readfile) ~= "function" then return nil end
-    local ok, content = pcall(function() return readfile(path) end)
-    if ok then return content end
-    return nil
-end
+local function updESP(char, isTarget)
+    local data = State.TrackedCharacters[char]
+    if not data then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local root = char:FindFirstChild("HumanoidRootPart")
 
-local CONFIG_PATH = "amnesia_config.json"
-local function SaveConfig()
-    local cfg = BuildConfigTable()
-    local encoded = HttpService:JSONEncode(cfg)
-    safeWrite(CONFIG_PATH, encoded)
-end
-
-local function LoadConfig()
-    local raw = safeRead(CONFIG_PATH)
-    if raw then
-        local ok, cfg = pcall(function() return HttpService:JSONDecode(raw) end)
-        if ok and cfg then ApplyConfigTable(cfg) end
+    if not hum or hum.Health <= 0 or not root then
+        rmESP(char)
+        return
     end
+
+    data.Highlight.OutlineColor = isTarget and Settings.TargetColor or Settings.EnemyColor
+    data.Highlight.FillColor = isTarget and Settings.TargetColor or Settings.EnemyColor
+
+    local hp = hum.Health
+    local max = hum.MaxHealth
+    local percent = hp / max
+
+    data.HealthLabel.Text = "HP: "..math.floor(hp).."/"..math.floor(max)
+    data.HealthLabel.TextColor3 = Settings.HealthColor:lerp(Color3.fromRGB(255,0,0), 1-percent)
 end
 
--- Config UI (simple)
-local cfgRow = create("Frame", {BackgroundTransparency = 1, Size = UDim2.new(1,0,0,40)}, Tabs.Configs.Page)
-create("TextLabel", {
-    Text = "Local Config",
-    Font = Enum.Font.GothamBold,
-    TextSize = 18,
-    TextColor3 = Theme.text,
-    BackgroundTransparency = 1,
-    Size = UDim2.new(0.4,0,1,0),
-    TextXAlignment = Enum.TextXAlignment.Left,
-}, cfgRow)
+-- Target finder
+local function aimlock()
+    local localChar = LocalPlayer.Character
+    if not localChar or not localChar:FindFirstChild("HumanoidRootPart") then return end
 
-local saveBtn = create("TextButton", {
-    Text = "Save",
-    Font = Enum.Font.GothamBold,
-    TextSize = 16,
-    TextColor3 = Theme.text,
-    BackgroundColor3 = Theme.tab,
-    BorderSizePixel = 0,
-    Size = UDim2.new(0,70,0,30),
-    Position = UDim2.new(0.45,0,0.5,-15),
-}, cfgRow)
-create("UICorner", {CornerRadius = UDim.new(0,8)}, saveBtn)
-saveBtn.MouseButton1Click:Connect(SaveConfig)
+    local best = nil
+    local bestDist = math.huge
+    local sc = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
-local loadBtn = create("TextButton", {
-    Text = "Load",
-    Font = Enum.Font.GothamBold,
-    TextSize = 16,
-    TextColor3 = Theme.text,
-    BackgroundColor3 = Theme.tab,
-    BorderSizePixel = 0,
-    Size = UDim2.new(0,70,0,30),
-    Position = UDim2.new(0.62,0,0.5,-15),
-}, cfgRow)
-create("UICorner", {CornerRadius = UDim.new(0,8)}, loadBtn)
-loadBtn.MouseButton1Click:Connect(LoadConfig)
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                local pos, onScreen = Camera:WorldToScreenPoint(
+                    p.Character.HumanoidRootPart.Position + Settings.HeadOffset
+                )
 
--- Placeholder hooks for game logic
--- TODO: Add your gameplay code here. Example pattern:
--- local function ApplyPlayerSettings()
---     -- Example: set humanoid properties if you want
---     -- local char = LocalPlayer.Character
---     -- if char and char:FindFirstChild("Humanoid") then
---     --     char.Humanoid.WalkSpeed = speedSlider.Get()
---     --     char.Humanoid.JumpPower = jumpSlider.Get()
---     -- end
--- end
--- You can call ApplyPlayerSettings() on events or a loop with a safe wait.
+                if onScreen then
+                    local dist = (Vector2.new(pos.X,pos.Y) - sc).Magnitude
+                    local worldDist = (p.Character.HumanoidRootPart.Position - localChar.HumanoidRootPart.Position).Magnitude
 
--- Minimal loop to update info label (non-invasive)
-local infoLabel = infoBox:FindFirstChildOfClass("TextLabel")
-task.spawn(function()
-    while true do
-        if infoLabel then
-            local t = os.date("*t")
-            infoLabel.Text = string.format("Time: %02d:%02d:%02d\nDate: %02d.%02d.%04d\nExecutor: %s",
-                t.hour, t.min, t.sec, t.day, t.month, t.year, "Template")
+                    if dist <= Settings.FOV and worldDist <= Settings.MaxDistance and dist < bestDist then
+                        bestDist = dist
+                        best = p.Character
+                    end
+                end
+            end
         end
-        task.wait(1)
+    end
+    return best
+end
+
+-- Aiming
+local function lockAim(target)
+    if not target then return end
+    local head = target:FindFirstChild("Head")
+    if not head then return end
+
+    local desired = CFrame.new(Camera.CFrame.Position, head.Position)
+    Camera.CFrame = Camera.CFrame:Lerp(desired, 1 / Settings.SmoothingFactor)
+end
+
+-- Player tracking
+local function track(p)
+    if p == LocalPlayer then return end
+
+    p.CharacterAdded:Connect(function(char)
+        wait(0.1)
+        makeESP(char, p)
+    end)
+
+    p.CharacterRemoving:Connect(function(char)
+        rmESP(char)
+    end)
+
+    if p.Character then
+        makeESP(p.Character, p)
+    end
+end
+
+for _, plr in pairs(Players:GetPlayers()) do track(plr) end
+Players.PlayerAdded:Connect(track)
+
+-- GUI toggle
+local GUI = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+GUI.ResetOnSpawn = false
+
+local ToggleLabel = Instance.new("TextLabel", GUI)
+ToggleLabel.Position = UDim2.new(0.5,-150,0.9,0)
+ToggleLabel.Size = UDim2.new(0,300,0,30)
+ToggleLabel.BackgroundColor3 = Color3.new(0,0,0)
+ToggleLabel.BackgroundTransparency = 0.4
+ToggleLabel.TextScaled = true
+ToggleLabel.TextColor3 = Color3.new(1,1,1)
+ToggleLabel.Text = "Aimbot: OFF (Hold RMB | Press 'L')"
+
+UserInputService.InputBegan:Connect(function(i,g)
+    if g then return end
+    if i.KeyCode == Enum.KeyCode.L then
+        Settings.AimbotEnabled = not Settings.AimbotEnabled
+        ToggleLabel.Text = "Aimbot: "..(Settings.AimbotEnabled and "ON" or "OFF").." (Hold RMB | Press 'L')"
     end
 end)
 
--- End of template
+RunService.RenderStepped:Connect(function()
+    for _, p in pairs(Players:GetPlayers()) do
+        local c = p.Character
+        if p ~= LocalPlayer and c and not State.TrackedCharacters[c] then
+            makeESP(c, p)
+        end
+    end
+end)
+
+-- ml
+RunService.RenderStepped:Connect(function()
+    local target = aimlock()
+    FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+
+    if Settings.AimbotEnabled and UserInputService:IsMouseButtonPressed(Settings.AimbotKey) then
+        lockAim(target)
+    end
+
+    for char,_ in pairs(State.TrackedCharacters) do
+        updESP(char, char == target)
+    end
+end)
