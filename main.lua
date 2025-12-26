@@ -4,7 +4,7 @@
 --  Modified: removed AutoFire feature and Kill Panel per request
 -- ═══════════════════════════════════════════════════════════
 
--- Attente de chargement du jeu pour éviter le crash (Utilisation de `wait()`)
+-- Wait for the game to load to avoid crashing (Using `wait()`)
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 local Players = game:GetService("Players")
@@ -19,15 +19,15 @@ local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 local Camera = workspace.CurrentCamera
 
--- === FONCTION CRITIQUE : TROUVER OU METTRE LE GUI ===
+-- === CRITICAL FUNCTION: FIND OR SET THE GUI PARENT ===
 local function GetSafeParent()
     local success, core = pcall(function() return game:GetService("CoreGui") end)
     if success and core then
-        -- Teste si on peut insérer dans CoreGui
+        -- Test if we can insert into CoreGui
         local s, e = pcall(function() local t = Instance.new("ScreenGui", core) t:Destroy() end)
         if s then return core end
     end
-    -- Sinon, on utilise PlayerGui
+    -- Otherwise, use PlayerGui
     return Player:WaitForChild("PlayerGui")
 end
 
@@ -35,7 +35,7 @@ local TargetParent = GetSafeParent()
 
 -- === CONFIGURATION & THEME ===
 local Theme = {
-    -- Palette mise à jour : contraste plus élevé et accent plus moderne
+    -- Updated palette: higher contrast and more modern accent
     Main = Color3.fromRGB(20, 22, 30),
     Sidebar = Color3.fromRGB(28, 30, 40),
     Content = Color3.fromRGB(34, 36, 48),
@@ -55,15 +55,15 @@ local Config = {
     HitboxExpander = false,
     HitboxSize = 5,
     Aimbot = false,
-    KillAura = false,     -- NOUVEAU
-    AntiKnockback = false, -- NOUVEAU
+    KillAura = false,     -- NEW
+    AntiKnockback = false, -- NEW
     AutoFire = false,
     -- Visuals
     ESP = false,
     BoxESP = false,
     Tracers = false,
-    NameESP = false,     -- NOUVEAU
-    XRay = false,        -- NOUVEAU
+    NameESP = false,     -- NEW
+    XRay = false,        -- NEW
     Fullbright = false,
     FOV = 70,
     AimbotRange = 300, -- maximum world distance (studs) to consider for aimbot
@@ -71,14 +71,14 @@ local Config = {
     AimbotLockRetention = 0.35 -- seconds to keep a locked target when briefly occluded
 }
 
--- Keybinds (stockées comme noms de Enum.KeyCode pour save/load)
+-- Keybinds (stored as Enum.KeyCode names for save/load)
 Config.Keybinds = {
     ToggleMenu = "Insert",
     Fly = "F",
     Noclip = "N"
 }
 
--- Extended defaults for other features (utilisables dans le panneau Settings)
+-- Extended defaults for other features (usable in the Settings panel)
 local defaultExtras = {
     ESP = "K",
     BoxESP = "L",
@@ -111,10 +111,10 @@ ScreenGui.Name = "Universale OMEGA v2"
 ScreenGui.Parent = TargetParent
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.ResetOnSpawn = false
--- Tentative directe sans pcall pour la simplicité
+-- Direct attempt without pcall for simplicity
 ScreenGui.IgnoreGuiInset = true 
 
--- Tracer Container (pour ESP Box/Line/Name)
+-- Tracer Container (for ESP Box/Line/Name)
 local TracerLayer = Instance.new("Frame", ScreenGui)
 TracerLayer.Name = "TracerLayer"
 TracerLayer.Size = UDim2.new(1,0,1,0)
@@ -122,7 +122,7 @@ TracerLayer.BackgroundTransparency = 1
 TracerLayer.Visible = true
 TracerLayer.ZIndex = 1
 
--- === BOUTON D'OUVERTURE DE SECOURS (Clic pour masquer/montrer) ===
+-- === BACKUP OPEN BUTTON (Click to hide/show) ===
 local OpenBtn = Instance.new("TextButton", ScreenGui)
 OpenBtn.Name = "OpenButton"
 OpenBtn.Size = UDim2.new(0, 50, 0, 50)
@@ -135,11 +135,11 @@ OpenBtn.TextSize = 24
 local OBCorner = Instance.new("UICorner", OpenBtn) OBCorner.CornerRadius = UDim.new(0, 12)
 local OBStroke = Instance.new("UIStroke", OpenBtn) OBStroke.Color = Theme.Accent OBStroke.Thickness = 2
 
--- Effet de Flou (Safe)
+-- Blur Effect (Safe)
 local Blur = Instance.new("BlurEffect", Lighting)
 Blur.Size = 15 
 
--- Frame Principale
+-- Main Frame
 local Main = Instance.new("Frame", ScreenGui)
 Main.Name = "MainFrame"
 Main.Size = UDim2.new(0, 850, 0, 550)
@@ -156,7 +156,7 @@ MainStroke.Color = Theme.StrokeAccent
 MainStroke.Thickness = 1.5 
 MainStroke.Transparency = 0 
 
--- === SYSTEME DRAGGABLE ===
+-- === DRAGGABLE SYSTEM ===
 local dragging, dragInput, dragStart, startPos
 local function MakeDraggable(frame)
     frame.InputBegan:Connect(function(input)
@@ -183,7 +183,7 @@ local function MakeDraggable(frame)
 end
 MakeDraggable(Main)
 
--- === SIDEBAR & LAYOUT (Réutilisé) ===
+-- === SIDEBAR & LAYOUT (Reused) ===
 local Sidebar = Instance.new("Frame", Main)
 Sidebar.Size = UDim2.new(0, 220, 1, 0)
 Sidebar.BackgroundColor3 = Theme.Sidebar
@@ -282,7 +282,7 @@ UIList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     ContentScroll.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y + 20)
 end)
 
--- === UI BUILDER FUNCTIONS (Réutilisé) ===
+-- === UI BUILDER FUNCTIONS (Reused) ===
 local function CreateTab(name, isActive)
     local TabBtn = Instance.new("TextButton", TabContainer)
     TabBtn.Size = UDim2.new(0.85, 0, 0, 40)
@@ -361,7 +361,7 @@ local function CreateToggle(tabName, text, callback, initialState)
         local targetPos = toggled and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10)
         TweenService:Create(SwitchBg, TweenInfo.new(0.3), {BackgroundColor3 = targetColor}):Play()
         TweenService:Create(SwitchDot, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = targetPos}):Play()
-        callback(toggled) -- Suppression de pcall pour la clarté
+        callback(toggled) -- Removed pcall for clarity
     end)
 end
 
@@ -414,7 +414,7 @@ local function CreateSlider(tabName, text, min, max, default, callback)
             SlideFill.Size = pos
             local val = math.floor(min + ((max - min) * pos.X.Scale))
             ValueLabel.Text = tostring(val)
-            callback(val) -- Suppression de pcall
+            callback(val) -- Removed pcall
         end
     end)
 end
@@ -433,9 +433,9 @@ local function CreateButton(tabName, text, callback)
     
     Btn.MouseButton1Click:Connect(function()
         TweenService:Create(Btn, TweenInfo.new(0.1), {TextSize = 14}):Play()
-        wait(0.1) -- Remplacement de task.wait par wait
+        wait(0.1) -- Replaced task.wait with wait
         TweenService:Create(Btn, TweenInfo.new(0.1), {TextSize = 16}):Play()
-        callback() -- Suppression de pcall
+        callback() -- Removed pcall
     end)
 end
 
@@ -455,7 +455,7 @@ local function CreateInput(tabName, placeholder, callback)
     Box.TextXAlignment = Enum.TextXAlignment.Left
     
     Box.FocusLost:Connect(function(enter)
-        if enter then callback(Box.Text) end -- Suppression de pcall
+        if enter then callback(Box.Text) end -- Removed pcall
     end)
     return Box
 end
@@ -527,7 +527,7 @@ end
 
 local function SetNoclipState(s)
     -- Reuse the previous noclip implementation but within a callable function
-    -- Nettoyage d'anciennes connexions Noclip (gère ancien format et nouveau)
+    -- Cleanup old Noclip connections (handles old and new formats)
     if Connections.Noclip then
         if type(Connections.Noclip) == "table" then
             if Connections.Noclip.CharAdded then Connections.Noclip.CharAdded:Disconnect() end
@@ -649,12 +649,12 @@ end)
 
 
 -- === COMBAT LOGIC ===
-CreateToggle("Combat", "Kill Aura (Auto-attaque)", function(s)
+CreateToggle("Combat", "Kill Aura (Auto-attack)", function(s)
     Config.KillAura = s
     if Connections.KillAura then Connections.KillAura:Disconnect() end
 
     local function GetClosestTarget()
-        local minDistance = 30 -- Portée de l'Aura
+        local minDistance = 30 -- Range of the Aura
         local closestTarget = nil
         local root = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
         if not root then return nil end
@@ -678,9 +678,9 @@ CreateToggle("Combat", "Kill Aura (Auto-attaque)", function(s)
             if target then
                 local root = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
                 if root then
-                    -- Rotation rapide vers la cible
+                    -- Quick rotation towards the target
                     root.CFrame = CFrame.new(root.Position, target.Position)
-                    -- Simuler un clic de souris pour déclencher l'attaque de l'outil équipé
+                    -- Simulate a mouse click to trigger the equipped tool's attack
                     UserInputService:SimulateMouseClick(Mouse.X, Mouse.Y)
                 end
             end
@@ -696,7 +696,7 @@ CreateToggle("Combat", "Anti-Knockback", function(s)
         Connections.AntiKnockback = RunService.Heartbeat:Connect(function()
             local humanoid = Player.Character and Player.Character:FindFirstChild("Humanoid")
             if humanoid and humanoid.Health > 0 then
-                -- Force l'état Stand pour annuler les forces externes de repoussement
+                -- Force the Running state to cancel external knockback forces
                 humanoid:ChangeState(Enum.HumanoidStateType.Running)
             end
         end)
@@ -708,8 +708,8 @@ CreateToggle("Combat", "Hitbox Expander", function(s)
     if not s then
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= Player and p.Character and p.Character:FindFirstChild("Head") then
-                -- Restauration des propriétés de la tête
-                p.Character.Head.Size = Vector3.new(2,1,1) -- Taille standard de la tête
+                -- Restore head properties
+                p.Character.Head.Size = Vector3.new(2,1,1) -- standard head size
                 p.Character.Head.Transparency = 0
                 p.Character.Head.CanCollide = true
             end
@@ -718,24 +718,17 @@ CreateToggle("Combat", "Hitbox Expander", function(s)
 end)
 
 CreateSlider("Combat", "Hitbox Size", 2, 20, 5, function(v) Config.HitboxSize = v end)
-
 CreateToggle("Combat", "Aimbot (Right Click)", function(s) Config.Aimbot = s end)
-
 
 RunService.RenderStepped:Connect(function()
     local humanoid = Player.Character and Player.Character:FindFirstChild("Humanoid")
     if humanoid then
         -- Enforce WalkSpeed
-        if humanoid.WalkSpeed ~= Config.Speed then
-            humanoid.WalkSpeed = Config.Speed
-        end
+        if humanoid.WalkSpeed ~= Config.Speed then humanoid.WalkSpeed = Config.Speed end
         -- Enforce JumpPower
-        if humanoid.JumpPower ~= Config.Jump then
-            humanoid.UseJumpPower = true
-            humanoid.JumpPower = Config.Jump
-        end
+        if humanoid.JumpPower ~= Config.Jump then humanoid.UseJumpPower = true humanoid.JumpPower = Config.Jump end
     end
-    
+
     if Config.HitboxExpander then
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= Player and p.Character and p.Character:FindFirstChild("Head") then
@@ -745,7 +738,7 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end
-    
+
     local rightHeld = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
     if Config.Aimbot and rightHeld then
         -- if we don't have a locked target yet, search for the best candidate nearby the crosshair
@@ -784,19 +777,13 @@ RunService.RenderStepped:Connect(function()
                 local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
                 local myRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
                 local withinRange = true
-                if myRoot and targetRoot then
-                    withinRange = (myRoot.Position - targetRoot.Position).Magnitude <= (Config.AimbotRange or 300)
-                end
-
+                if myRoot and targetRoot then withinRange = (myRoot.Position - targetRoot.Position).Magnitude <= (Config.AimbotRange or 300) end
                 if not withinRange then
                     AimbotState.lockedTarget = nil
                 else
                     local head = target.Character:FindFirstChild("Head")
                     local pos, vis = Camera:WorldToViewportPoint(head.Position)
-                    if vis then
-                        AimbotState.lastSeenAt = tick()
-                    end
-
+                    if vis then AimbotState.lastSeenAt = tick() end
                     if tick() - (AimbotState.lastSeenAt or 0) <= (Config.AimbotLockRetention or 0.35) then
                         Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, head.Position), Config.AimbotSmooth or 0.2)
                     else
@@ -819,8 +806,8 @@ end)
 -- === VISUALS LOGIC ===
 CreateToggle("Visuals", "ESP Highlight", function(s)
     Config.ESP = s
-    if not s then 
-        for _, hl in pairs(VisualsCache.Highlights) do 
+    if not s then
+        for _, hl in pairs(VisualsCache.Highlights) do
             if hl.Parent then hl:Destroy() end
         end
         VisualsCache.Highlights = {}
@@ -851,39 +838,30 @@ end)
 CreateToggle("Visuals", "X-Ray/Wallhack", function(s)
     Config.XRay = s
     local function setTransparency(part, t)
-        if part:IsA("BasePart") and part.CanCollide and not part:IsDescendantOf(Player.Character) then
-            part.LocalTransparencyModifier = t
-        end
+        if part:IsA("BasePart") and part.CanCollide and not part:IsDescendantOf(Player.Character) then part.LocalTransparencyModifier = t end
     end
-    
     if s then
-        Lighting.ClearColor = Color3.fromRGB(0,0,0) -- Assombrir l'environnement
-        for _, part in pairs(workspace:GetDescendants()) do
-            setTransparency(part, 0.5)
-        end
-        if Connections.XRay then Connections.XRay:Disconnect() end -- S'assurer de déconnecter l'ancienne
-        Connections.XRay = workspace.DescendantAdded:Connect(function(descendant)
-            setTransparency(descendant, 0.5)
-        end)
+        Lighting.ClearColor = Color3.fromRGB(0,0,0) -- Darken environment
+        for _, part in pairs(workspace:GetDescendants()) do setTransparency(part, 0.5) end
+        if Connections.XRay then Connections.XRay:Disconnect() end
+        -- Ensure to disconnect previous
+        Connections.XRay = workspace.DescendantAdded:Connect(function(descendant) setTransparency(descendant, 0.5) end)
     else
         if Connections.XRay then Connections.XRay:Disconnect() end
-        Lighting.ClearColor = Color3.fromRGB(200, 200, 200) -- Retour à la normale (couleur par défaut)
+        Lighting.ClearColor = Color3.fromRGB(200, 200, 200) -- Return to normal (default color)
         for _, part in pairs(workspace:GetDescendants()) do
-            if part:IsA("BasePart") and part.LocalTransparencyModifier then
-                part.LocalTransparencyModifier = 0
-            end
+            if part:IsA("BasePart") and part.LocalTransparencyModifier then part.LocalTransparencyModifier = 0 end
         end
     end
 end)
 
 RunService.RenderStepped:Connect(function()
     if not Config.ESP and not Config.BoxESP and not Config.Tracers and not Config.NameESP then return end
-    
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= Player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Head") then
             local head = p.Character.Head
-            local pos, vis = Camera:WorldToViewportPoint(head.Position) 
-            
+            local pos, vis = Camera:WorldToViewportPoint(head.Position)
+
             -- ESP (Highlight)
             if Config.ESP then
                 if not VisualsCache.Highlights[p] or not VisualsCache.Highlights[p].Parent then
@@ -899,7 +877,7 @@ RunService.RenderStepped:Connect(function()
                     VisualsCache.Highlights[p] = nil
                 end
             end
-            
+
             -- Tracers
             local line = VisualsCache.Tracers[p]
             if not line then
@@ -909,7 +887,7 @@ RunService.RenderStepped:Connect(function()
                 line.AnchorPoint = Vector2.new(0.5, 0.5)
                 VisualsCache.Tracers[p] = line
             end
-            
+
             -- Boxes (outline visible + slight transparent fill)
             local box = VisualsCache.Boxes[p]
             if not box then
@@ -959,7 +937,6 @@ RunService.RenderStepped:Connect(function()
                 local boxW = math.floor(boxH / 1.5)
                 local centerX = (topScreen.X + bottomScreen.X) / 2
                 local centerY = (topScreen.Y + bottomScreen.Y) / 2
-
                 local rawSize = 2500 / pos.Z
                 local size = math.clamp(math.floor(rawSize), 30, 600)
 
@@ -998,21 +975,18 @@ RunService.RenderStepped:Connect(function()
                 else
                     nameLabel.Visible = false
                 end
-
-            else -- Hors écran
+            else
+                -- Offscreen
                 line.Visible = false
                 box.Visible = false
                 nameLabel.Visible = false
             end
         else
-            -- Nettoyage si le personnage n'existe plus
+            -- Cleanup if the character no longer exists
             if VisualsCache.Tracers[p] then VisualsCache.Tracers[p].Visible = false end
             if VisualsCache.Boxes[p] then VisualsCache.Boxes[p].Visible = false end
             if VisualsCache.NameLabels[p] then VisualsCache.NameLabels[p].Visible = false end
-            if VisualsCache.Highlights[p] and VisualsCache.Highlights[p].Parent then 
-                VisualsCache.Highlights[p]:Destroy()
-                VisualsCache.Highlights[p] = nil
-            end
+            if VisualsCache.Highlights[p] and VisualsCache.Highlights[p].Parent then VisualsCache.Highlights[p]:Destroy() VisualsCache.Highlights[p] = nil end
         end
     end
 end)
@@ -1031,7 +1005,7 @@ CreateToggle("Visuals", "Fullbright", function(s)
 end)
 
 -- === TELEPORT LOGIC ===
-CreateInput("Teleport", "TP Player: Nom...", function(text)
+CreateInput("Teleport", "TP Player: Name...", function(text)
     local targetFound = false
     for _, p in pairs(Players:GetPlayers()) do
         if string.sub(string.lower(p.Name), 1, #text) == string.lower(text) or string.sub(string.lower(p.DisplayName), 1, #text) == string.lower(text) then
@@ -1042,9 +1016,7 @@ CreateInput("Teleport", "TP Player: Nom...", function(text)
             end
         end
     end
-    if not targetFound then
-        warn("Téléportation Joueur: Aucun joueur trouvé correspondant à '" .. text .. "'.")
-    end
+    if not targetFound then warn("Teleport Player: No matching player found for '" .. text .. "'.") end
 end)
 
 local tpCoordsInput = CreateInput("Teleport", "TP Coords: X, Y, Z (ex: 100, 50, -200)", function(text)
@@ -1053,19 +1025,15 @@ local tpCoordsInput = CreateInput("Teleport", "TP Coords: X, Y, Z (ex: 100, 50, 
         local x = tonumber(parts[1])
         local y = tonumber(parts[2])
         local z = tonumber(parts[3])
-        
         if x and y and z and Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
             Player.Character.HumanoidRootPart.CFrame = CFrame.new(x, y + 3, z)
-            tpCoordsInput.Text = "" 
-        else
-            warn("Téléportation Coords: Format de coordonnées invalide (doit être X, Y, Z numériques).")
-        end
-    else
-        warn("Téléportation Coords: Veuillez entrer 3 coordonnées séparées par des virgules (X, Y, Z).")
-    end
+            tpCoordsInput.Text = ""
+        else warn("Teleport Coords: Invalid coordinate format (must be numeric X, Y, Z).") end
+    else warn("Teleport Coords: Please enter 3 coordinates separated by commas (X, Y, Z).") end
 end)
 
 CreateToggle("Teleport", "Click TP (Ctrl+Click)", function(s) Config.ClickTP = s end)
+
 Mouse.Button1Down:Connect(function()
     if Config.ClickTP and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
         local pos = Mouse.Hit.p
@@ -1075,12 +1043,12 @@ Mouse.Button1Down:Connect(function()
     end
 end)
 
-CreateButton("Teleport", "TP au Spawn du Joueur", function()
+CreateButton("Teleport", "TP to Player Spawn", function()
     local spawnLocation = workspace:FindFirstChildOfClass("SpawnLocation") or workspace:FindFirstChild("SpawnLocation")
     if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") and spawnLocation then
         Player.Character.HumanoidRootPart.CFrame = spawnLocation.CFrame + Vector3.new(0, 5, 0)
     elseif Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
-        -- Tentative de TP au centre de la map si aucun SpawnLocation n'est trouvé
+        -- Attempt to TP to map center if no SpawnLocation found
         Player.Character.HumanoidRootPart.CFrame = CFrame.new(0, 100, 0)
     end
 end)
@@ -1093,40 +1061,17 @@ local KEYBINDS_FILE = "univ_omega_keybinds.json"
 
 -- Theme presets
 local ThemePresets = {
-    DarkTurquoise = {
-        Main = Color3.fromRGB(20,22,30), Sidebar = Color3.fromRGB(28,30,40), Content = Color3.fromRGB(34,36,48),
-        Accent = Color3.fromRGB(72,209,204), Text = Color3.fromRGB(242,242,245), TextDark = Color3.fromRGB(170,174,183),
-        Stroke = Color3.fromRGB(40,44,54), StrokeAccent = Color3.fromRGB(122,220,215)
-    },
-    MidnightPurple = {
-        Main = Color3.fromRGB(12,10,25), Sidebar = Color3.fromRGB(18,16,36), Content = Color3.fromRGB(24,22,46),
-        Accent = Color3.fromRGB(178,102,255), Text = Color3.fromRGB(240,240,245), TextDark = Color3.fromRGB(160,150,170),
-        Stroke = Color3.fromRGB(30,26,44), StrokeAccent = Color3.fromRGB(150,110,255)
-    },
-    Solar = {
-        -- Revised Solar: warmer, higher-contrast accents and cleaner neutrals
-        Main = Color3.fromRGB(250,244,236), Sidebar = Color3.fromRGB(247,241,231), Content = Color3.fromRGB(242,237,222),
-        Accent = Color3.fromRGB(255,159,67), Text = Color3.fromRGB(28,28,26), TextDark = Color3.fromRGB(115,110,100),
-        Stroke = Color3.fromRGB(225,218,204), StrokeAccent = Color3.fromRGB(255,140,50)
+    DarkTurquoise = { Main = Color3.fromRGB(20,22,30), Sidebar = Color3.fromRGB(28,30,40), Content = Color3.fromRGB(34,36,48), Accent = Color3.fromRGB(72,209,204), Text = Color3.fromRGB(242,242,245), TextDark = Color3.fromRGB(170,174,183), Stroke = Color3.fromRGB(40,44,54), StrokeAccent = Color3.fromRGB(122,220,215) },
+    MidnightPurple = { Main = Color3.fromRGB(12,10,25), Sidebar = Color3.fromRGB(18,16,36), Content = Color3.fromRGB(24,22,46), Accent = Color3.fromRGB(178,102,255), Text = Color3.fromRGB(240,240,245), TextDark = Color3.fromRGB(160,150,170), Stroke = Color3.fromRGB(30,26,44), StrokeAccent = Color3.fromRGB(150,110,255) },
+    Solar = { -- Revised Solar: warmer, higher-contrast accents and cleaner neutrals
+        Main = Color3.fromRGB(250,244,236), Sidebar = Color3.fromRGB(247,241,231), Content = Color3.fromRGB(242,237,222), Accent = Color3.fromRGB(255,159,67), Text = Color3.fromRGB(28,28,26), TextDark = Color3.fromRGB(115,110,100), Stroke = Color3.fromRGB(225,218,204), StrokeAccent = Color3.fromRGB(255,140,50)
     }
 }
 
 -- Extra themes
-ThemePresets.Emerald = {
-    Main = Color3.fromRGB(10,30,20), Sidebar = Color3.fromRGB(12,36,24), Content = Color3.fromRGB(18,46,30),
-    Accent = Color3.fromRGB(0,230,118), Text = Color3.fromRGB(240,250,245), TextDark = Color3.fromRGB(150,170,160),
-    Stroke = Color3.fromRGB(10,40,28), StrokeAccent = Color3.fromRGB(0,200,100)
-}
-ThemePresets.Crimson = {
-    Main = Color3.fromRGB(30,10,12), Sidebar = Color3.fromRGB(36,12,14), Content = Color3.fromRGB(46,18,20),
-    Accent = Color3.fromRGB(255,82,82), Text = Color3.fromRGB(250,240,240), TextDark = Color3.fromRGB(170,140,140),
-    Stroke = Color3.fromRGB(40,18,20), StrokeAccent = Color3.fromRGB(220,80,80)
-}
-ThemePresets.MidnightBlue = {
-    Main = Color3.fromRGB(6,12,30), Sidebar = Color3.fromRGB(8,16,40), Content = Color3.fromRGB(12,24,56),
-    Accent = Color3.fromRGB(97,137,255), Text = Color3.fromRGB(240,245,255), TextDark = Color3.fromRGB(130,150,180),
-    Stroke = Color3.fromRGB(20,30,50), StrokeAccent = Color3.fromRGB(100,140,255)
-}
+ThemePresets.Emerald = { Main = Color3.fromRGB(10,30,20), Sidebar = Color3.fromRGB(12,36,24), Content = Color3.fromRGB(18,46,30), Accent = Color3.fromRGB(0,230,118), Text = Color3.fromRGB(240,250,245), TextDark = Color3.fromRGB(150,170,160), Stroke = Color3.fromRGB(10,40,28), StrokeAccent = Color3.fromRGB(0,200,100) }
+ThemePresets.Crimson = { Main = Color3.fromRGB(30,10,12), Sidebar = Color3.fromRGB(36,12,14), Content = Color3.fromRGB(46,18,20), Accent = Color3.fromRGB(255,82,82), Text = Color3.fromRGB(250,240,240), TextDark = Color3.fromRGB(170,140,140), Stroke = Color3.fromRGB(40,18,20), StrokeAccent = Color3.fromRGB(220,80,80) }
+ThemePresets.MidnightBlue = { Main = Color3.fromRGB(6,12,30), Sidebar = Color3.fromRGB(8,16,40), Content = Color3.fromRGB(12,24,56), Accent = Color3.fromRGB(97,137,255), Text = Color3.fromRGB(240,245,255), TextDark = Color3.fromRGB(130,150,180), Stroke = Color3.fromRGB(20,30,50), StrokeAccent = Color3.fromRGB(100,140,255) }
 
 local function ApplyTheme(preset)
     if not preset then return end
@@ -1144,9 +1089,7 @@ local function ApplyTheme(preset)
         AvatarStroke.Color = Theme.Accent
         PageTitle.TextColor3 = Theme.Text
         -- update keybind buttons color
-        for _, btn in pairs(KeybindButtons) do
-            if btn and btn:IsA("TextButton") then btn.TextColor3 = Theme.Accent end
-        end
+        for _, btn in pairs(KeybindButtons) do if btn and btn:IsA("TextButton") then btn.TextColor3 = Theme.Accent end end
         -- update visuals cache
         for p,hl in pairs(VisualsCache.Highlights) do if hl and hl.Parent then hl.FillColor = Theme.Accent end end
         for p,line in pairs(VisualsCache.Tracers) do if line and line.Parent then line.BackgroundColor3 = Theme.Accent end end
@@ -1167,30 +1110,20 @@ pcall(function()
         Caret.TextColor3 = Theme.Text
         -- update dropdown entries colors
         for _, child in pairs(TDropdown:GetChildren()) do
-            if child:IsA("TextButton") then
-                child.BackgroundColor3 = Theme.Content
-                child.TextColor3 = Theme.Text
-            end
+            if child:IsA("TextButton") then child.BackgroundColor3 = Theme.Content child.TextColor3 = Theme.Text end
         end
     end
 end)
 
 local function SaveKeybinds()
-    if type(writefile) ~= "function" then
-        warn("Sauvegarde impossible: 'writefile' non disponible dans cet environnement.")
-        return false
-    end
-    local ok, err = pcall(function()
-        writefile(KEYBINDS_FILE, HttpService:JSONEncode(Config.Keybinds))
-    end)
-    if not ok then warn("Erreur sauvegarde keybinds:", err) end
+    if type(writefile) ~= "function" then warn("Save impossible: 'writefile' not available in this environment.") return false end
+    local ok, err = pcall(function() writefile(KEYBINDS_FILE, HttpService:JSONEncode(Config.Keybinds)) end)
+    if not ok then warn("Error saving keybinds:", err) end
     return ok
 end
 
 local function LoadKeybinds()
-    if type(readfile) ~= "function" then
-        return false
-    end
+    if type(readfile) ~= "function" then return false end
     local ok, content = pcall(function() return readfile(KEYBINDS_FILE) end)
     if not ok or not content then return false end
     local suc, data = pcall(function() return HttpService:JSONDecode(content) end)
@@ -1211,36 +1144,32 @@ SettingsFrame.BackgroundColor3 = Theme.Content
 SettingsFrame:SetAttribute("Tab", "Settings")
 SettingsFrame.Visible = false
 local SC = Instance.new("UICorner", SettingsFrame) SC.CornerRadius = UDim.new(0, 8)
-
-local Title = Instance.new("TextLabel", SettingsFrame)
-Title.Size = UDim2.new(1, -20, 0, 30) Title.Position = UDim2.new(0, 10, 0, 8)
-Title.BackgroundTransparency = 1 Title.Text = "Keybinds" Title.TextColor3 = Theme.Text
-Title.Font = Enum.Font.GothamBold Title.TextSize = 16 Title.TextXAlignment = Enum.TextXAlignment.Left
+local Title = Instance.new("TextLabel", SettingsFrame) Title.Size = UDim2.new(1, -20, 0, 30) Title.Position = UDim2.new(0, 10, 0, 8) Title.BackgroundTransparency = 1 Title.Text = "Keybinds" Title.TextColor3 = Theme.Text Title.Font = Enum.Font.GothamBold Title.TextSize = 16 Title.TextXAlignment = Enum.TextXAlignment.Left
 
 -- Theme selector moved to the 'Autres' tab (see lower in the file)
-
 local function makeBindRow(actionName, displayName, yOffset)
     local row = Instance.new("Frame", SettingsFrame)
     row.Size = UDim2.new(1, -20, 0, 36)
     row.Position = UDim2.new(0, 10, 0, 50 + yOffset)
     row.BackgroundTransparency = 1
-
     local lbl = Instance.new("TextLabel", row)
-    lbl.Size = UDim2.new(0.5, 0, 1, 0) lbl.Position = UDim2.new(0, 0, 0, 0)
-    lbl.BackgroundTransparency = 1 lbl.Text = displayName lbl.TextColor3 = Theme.Text
-    lbl.Font = Enum.Font.GothamMedium lbl.TextSize = 14 lbl.TextXAlignment = Enum.TextXAlignment.Left
-
+    lbl.Size = UDim2.new(0.5, 0, 1, 0)
+    lbl.Position = UDim2.new(0, 0, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = displayName
+    lbl.TextColor3 = Theme.Text
+    lbl.Font = Enum.Font.GothamMedium
+    lbl.TextSize = 14
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
     local btn = Instance.new("TextButton", row)
-    btn.Size = UDim2.new(0, 120, 0, 28) btn.Position = UDim2.new(1, -130, 0, 4)
+    btn.Size = UDim2.new(0, 120, 0, 28)
+    btn.Position = UDim2.new(1, -130, 0, 4)
     btn.Text = Config.Keybinds[actionName] or "Unset"
-    btn.Font = Enum.Font.GothamBold btn.TextSize = 14 btn.TextColor3 = Theme.Accent
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.TextColor3 = Theme.Accent
     local btnCorner = Instance.new("UICorner", btn) btnCorner.CornerRadius = UDim.new(0, 6)
-
-    btn.MouseButton1Click:Connect(function()
-        Rebinding = actionName
-        btn.Text = "Appuyez sur une touche..."
-    end)
-
+    btn.MouseButton1Click:Connect(function() Rebinding = actionName btn.Text = "Press a key..." end)
     KeybindButtons[actionName] = btn
 end
 
@@ -1259,34 +1188,34 @@ local rows = {
     {"Fullbright", "Fullbright"},
     {"ClickTP", "Click TP"}
 }
-
 local rowCount = #rows
 local settingsHeight = 50 + (rowCount * 40) + 60
 SettingsFrame.Size = UDim2.new(0.95, 0, 0, settingsHeight)
-
-for i, r in ipairs(rows) do
-    makeBindRow(r[1], r[2], (i-1) * 40)
-end
+for i, r in ipairs(rows) do makeBindRow(r[1], r[2], (i-1) * 40) end
 
 local SaveBtn = Instance.new("TextButton", SettingsFrame)
-SaveBtn.Size = UDim2.new(0, 100, 0, 28) SaveBtn.Position = UDim2.new(0, 10, 1, -40)
-SaveBtn.Text = "Save" SaveBtn.Font = Enum.Font.GothamBold SaveBtn.TextSize = 14 SaveBtn.TextColor3 = Theme.Text
+SaveBtn.Size = UDim2.new(0, 100, 0, 28)
+SaveBtn.Position = UDim2.new(0, 10, 1, -40)
+SaveBtn.Text = "Save"
+SaveBtn.Font = Enum.Font.GothamBold
+SaveBtn.TextSize = 14
+SaveBtn.TextColor3 = Theme.Text
 local SaveCorner = Instance.new("UICorner", SaveBtn) SaveCorner.CornerRadius = UDim.new(0, 6)
 SaveBtn.MouseButton1Click:Connect(function() if SaveKeybinds() then warn("Keybinds saved") end end)
 
 local LoadBtn = Instance.new("TextButton", SettingsFrame)
-LoadBtn.Size = UDim2.new(0, 100, 0, 28) LoadBtn.Position = UDim2.new(0, 120, 1, -40)
-LoadBtn.Text = "Load" LoadBtn.Font = Enum.Font.GothamBold LoadBtn.TextSize = 14 LoadBtn.TextColor3 = Theme.Text
+LoadBtn.Size = UDim2.new(0, 100, 0, 28)
+LoadBtn.Position = UDim2.new(0, 120, 1, -40)
+LoadBtn.Text = "Load"
+LoadBtn.Font = Enum.Font.GothamBold
+LoadBtn.TextSize = 14
+LoadBtn.TextColor3 = Theme.Text
 local LoadCorner = Instance.new("UICorner", LoadBtn) LoadCorner.CornerRadius = UDim.new(0, 6)
 LoadBtn.MouseButton1Click:Connect(function()
     if LoadKeybinds() then
-        for k,btn in pairs(KeybindButtons) do
-            btn.Text = Config.Keybinds[k] or "Unset"
-        end
+        for k,btn in pairs(KeybindButtons) do btn.Text = Config.Keybinds[k] or "Unset" end
         warn("Keybinds loaded")
-    else
-        warn("Aucun fichier keybinds trouvé ou lecture non supportée.")
-    end
+    else warn("No keybinds file found or reading not supported.") end
 end)
 
 -- Try load at startup (best-effort)
@@ -1318,10 +1247,7 @@ local function ToggleFeatureByName(action)
         if not Config.NameESP then for _,n in pairs(VisualsCache.NameLabels) do n.Visible = false end end
         return
     end
-    if action == "Aimbot" then
-        Config.Aimbot = not Config.Aimbot
-        return
-    end
+    if action == "Aimbot" then Config.Aimbot = not Config.Aimbot return end
     if action == "KillAura" then
         -- reuse existing KillAura logic: disconnect then (re)create if enabled
         if Connections.KillAura then Connections.KillAura:Disconnect() Connections.KillAura = nil end
@@ -1350,9 +1276,7 @@ local function ToggleFeatureByName(action)
                     local root = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
                     if root then
                         root.CFrame = CFrame.new(root.Position, target.Position)
-                        pcall(function()
-                            UserInputService:SimulateMouseClick(Mouse.X, Mouse.Y)
-                        end)
+                        pcall(function() UserInputService:SimulateMouseClick(Mouse.X, Mouse.Y) end)
                     end
                 end
             end)
@@ -1374,305 +1298,21 @@ local function ToggleFeatureByName(action)
     end
     if action == "Fullbright" then
         Config.Fullbright = not Config.Fullbright
-        if Config.Fullbright then
-            Lighting.Brightness = 5 Lighting.ClockTime = 12 Lighting.GlobalShadows = false
-        else
-            Lighting.Brightness = 1 Lighting.GlobalShadows = true
-        end
+        if Config.Fullbright then Lighting.Brightness = 5 Lighting.ClockTime = 12 Lighting.GlobalShadows = false else Lighting.Brightness = 1 Lighting.GlobalShadows = true end
         return
     end
-    if action == "ClickTP" then
-        Config.ClickTP = not Config.ClickTP
-        return
-    end
+    if action == "ClickTP" then Config.ClickTP = not Config.ClickTP return end
 end
 
 -- Allow toggle of AutoFire via keybind through this function
-if not ToggleFeatureByName then
-    -- noop (shouldn't happen)
-end
-
-
-
-
+if not ToggleFeatureByName then -- noop (shouldn't happen) end
 
 -- === SERVER LOGIC ===
-CreateButton("Server", "Rejoin Server", function()
-    TeleportService:Teleport(game.PlaceId, Player)
-end)
-
-CreateButton("Server", "Server Hop (Autre serveur)", function()
-    -- Tente de trouver un autre serveur (ne fonctionne pas toujours selon les permissions)
+CreateButton("Server", "Rejoin Server", function() TeleportService:Teleport(game.PlaceId, Player) end)
+CreateButton("Server", "Server Hop (Other server)", function()
+    -- Attempt to find another server (may not work depending on permissions)
     TeleportService:Teleport(game.PlaceId)
 end)
 
-
-
-
 -- === CONTACT LOGIC ===
-CreateButton("Contact", "Discord : le_joueur_de_berock2009", function()
-    setclipboard("le_joueur_de_berock2009")
-    warn("Lien Discord copié dans le presse-papier !")
-end)
-
-
-
-CreateButton("Contact", "Github (Scripts)", function()
-    setclipboard("https://github.com/xxxxxxx")
-    warn("Lien GitHub copié dans le presse-papier !")
-end)
-
--- === AUTRES LOGIC ===
-
--- === THEME MANAGER (moved to 'Autres' tab) ===
-local ThemeFrame = Instance.new("Frame", ContentScroll)
-ThemeFrame.Name = "ThemeManager"
-ThemeFrame.Size = UDim2.new(0.95, 0, 0, 120)
-ThemeFrame.Position = UDim2.new(0.025, 0, 0, 0)
-ThemeFrame.BackgroundColor3 = Theme.Content
--- Theme selector belongs to the 'Autres' tab (hidden by default)
-ThemeFrame:SetAttribute("Tab", "Autres")
-ThemeFrame.Visible = false
-local tfCorner = Instance.new("UICorner", ThemeFrame) tfCorner.CornerRadius = UDim.new(0, 8)
-
-local TTitle = Instance.new("TextLabel", ThemeFrame)
-TTitle.Size = UDim2.new(1, -20, 0, 30) TTitle.Position = UDim2.new(0, 10, 0, 8)
-TTitle.BackgroundTransparency = 1 TTitle.Text = "Theme & Apparence" TTitle.TextColor3 = Theme.Text
-TTitle.Font = Enum.Font.GothamBold TTitle.TextSize = 16 TTitle.TextXAlignment = Enum.TextXAlignment.Left
-
-local TLabel = Instance.new("TextLabel", ThemeFrame)
-TLabel.Size = UDim2.new(0.5, 0, 0, 24) TLabel.Position = UDim2.new(0, 10, 0, 38)
-TLabel.BackgroundTransparency = 1 TLabel.Text = "Sélectionner un thème" TLabel.TextColor3 = Theme.Text
-TLabel.Font = Enum.Font.GothamMedium TLabel.TextSize = 14 TLabel.TextXAlignment = Enum.TextXAlignment.Left
-
--- Theme selector button with color swatch and hover
-local TBtn = Instance.new("TextButton", ThemeFrame)
-TBtn.Size = UDim2.new(0, 180, 0, 34)
-TBtn.Position = UDim2.new(0, 170, 0, 34)
-TBtn.BackgroundColor3 = Theme.Content
-TBtn.AutoButtonColor = false
-TBtn.Text = "DarkTurquoise"
-TBtn.Font = Enum.Font.GothamBold TBtn.TextSize = 13 TBtn.TextColor3 = Theme.Text
-local TBtnCorner = Instance.new("UICorner", TBtn) TBtnCorner.CornerRadius = UDim.new(0,8)
-local TBtnStroke = Instance.new("UIStroke", TBtn) TBtnStroke.Color = Theme.StrokeAccent TBtnStroke.Thickness = 1
-
--- swatch preview
-local Swatch = Instance.new("Frame", TBtn)
-Swatch.Size = UDim2.new(0, 18, 0, 18) Swatch.Position = UDim2.new(0, 8, 0.5, -9)
-Swatch.BackgroundColor3 = Theme.Accent
-local SwCorner = Instance.new("UICorner", Swatch) SwCorner.CornerRadius = UDim.new(1,0)
-
--- caret icon
-local Caret = Instance.new("TextLabel", TBtn)
-Caret.Size = UDim2.new(0, 18, 0, 18) Caret.Position = UDim2.new(1, -26, 0.5, -9)
-Caret.BackgroundTransparency = 1 Caret.Text = "▾" Caret.Font = Enum.Font.GothamBold Caret.TextSize = 14 Caret.TextColor3 = Theme.Text
-
-local TDropdown = Instance.new("Frame", ThemeFrame)
-TDropdown.Size = UDim2.new(0, 180, 0, 0) TDropdown.Position = UDim2.new(0, 170, 0, 74)
-TDropdown.BackgroundColor3 = Theme.Content TDropdown.ClipsDescendants = true TDropdown.Visible = false
-local TddCorner = Instance.new("UICorner", TDropdown) TddCorner.CornerRadius = UDim.new(0,8)
-
-local tThemeNames = {"DarkTurquoise","MidnightPurple","Solar","Emerald","Crimson","MidnightBlue"}
-for i,name in ipairs(tThemeNames) do
-    local b = Instance.new("TextButton", TDropdown)
-    b.Size = UDim2.new(1,0,0,34) b.Position = UDim2.new(0,0,0,(i-1)*34)
-    b.BackgroundColor3 = Theme.Content b.Text = name b.Font = Enum.Font.GothamMedium b.TextSize = 13
-    b.TextColor3 = Theme.Text
-    b.AutoButtonColor = false
-    local bc = Instance.new("UICorner", b) bc.CornerRadius = UDim.new(0,6)
-    local hoverStroke = Instance.new("UIStroke", b) hoverStroke.Color = Theme.StrokeAccent hoverStroke.Thickness = 0.6
-
-    b.MouseEnter:Connect(function()
-        TweenService:Create(b, TweenInfo.new(0.12), {BackgroundTransparency = 0}):Play()
-        b.BackgroundColor3 = Color3.fromRGB(50,50,60)
-    end)
-    b.MouseLeave:Connect(function()
-        TweenService:Create(b, TweenInfo.new(0.12), {BackgroundTransparency = 0}):Play()
-        b.BackgroundColor3 = Theme.Content
-    end)
-
-    b.MouseButton1Click:Connect(function()
-        TBtn.Text = name
-        Swatch.BackgroundColor3 = ThemePresets[name].Accent or Swatch.BackgroundColor3
-        TDropdown.Visible = false
-        ApplyTheme(ThemePresets[name])
-    end)
-end
-local dropdownHeight = #tThemeNames * 34
-TDropdown.Size = UDim2.new(0, 180, 0, dropdownHeight)
--- Resize ThemeFrame to fit the dropdown and an action row for Kill Panel
-ThemeFrame.Size = UDim2.new(0.95, 0, 0, 120)
-
-TBtn.MouseEnter:Connect(function()
-    TweenService:Create(TBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(45,45,55)}):Play()
-    Caret.TextColor3 = Theme.Accent
-end)
-TBtn.MouseLeave:Connect(function()
-    TweenService:Create(TBtn, TweenInfo.new(0.12), {BackgroundColor3 = Theme.Content}):Play()
-    Caret.TextColor3 = Theme.Text
-end)
-TBtn.MouseButton1Click:Connect(function() TDropdown.Visible = not TDropdown.Visible end)
-
--- Apply initial theme safely
-pcall(function() ApplyTheme(ThemePresets[TBtn.Text] or ThemePresets.DarkTurquoise) end)
-
-
--- === GESTION OUVERTURE/FERMETURE ===
-local function ToggleMenu()
-    if Main.Visible then
-        -- Cacher le menu
-        TweenService:Create(Main, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
-        TweenService:Create(MainStroke, TweenInfo.new(0.3), {Transparency = 1, Color = Theme.Stroke}):Play() 
-        TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 0}):Play()
-        wait(0.3) -- Remplacement de task.wait par wait
-        Main.Visible = false
-    else
-        -- Montrer le menu
-        Main.Visible = true
-        TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
-        TweenService:Create(MainStroke, TweenInfo.new(0.5), {Transparency = 0, Color = Theme.StrokeAccent}):Play() 
-        TweenService:Create(Blur, TweenInfo.new(0.5), {Size = 15}):Play()
-    end
-end
-
--- Clic sur le bouton de secours "R"
-OpenBtn.MouseButton1Click:Connect(ToggleMenu)
-
--- Touche INSERT (reste active)
-local Debounce = false
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-
-    local kc = input.KeyCode
-
-    -- If we're rebinding, capture the pressed key
-    if Rebinding then
-        Config.Keybinds[Rebinding] = kc.Name
-        if KeybindButtons[Rebinding] then KeybindButtons[Rebinding].Text = kc.Name end
-        Rebinding = nil
-        pcall(SaveKeybinds)
-        return
-    end
-
-    -- Toggle menu (with debounce)
-    local toggleKey = Enum.KeyCode[Config.Keybinds.ToggleMenu]
-    if toggleKey and kc == toggleKey and not Debounce then
-        Debounce = true
-        ToggleMenu()
-        wait(0.5)
-        Debounce = false
-        return
-    end
-
-    -- Fly toggle
-    local flyKey = Enum.KeyCode[Config.Keybinds.Fly]
-    if flyKey and kc == flyKey then
-        Config.Fly = not Config.Fly
-        SetFlyState(Config.Fly)
-        if KeybindButtons.Fly then KeybindButtons.Fly.Text = Config.Keybinds.Fly end
-        return
-    end
-
-    -- Noclip toggle
-    local noclipKey = Enum.KeyCode[Config.Keybinds.Noclip]
-    if noclipKey and kc == noclipKey then
-        Config.Noclip = not Config.Noclip
-        SetNoclipState(Config.Noclip)
-        if KeybindButtons.Noclip then KeybindButtons.Noclip.Text = Config.Keybinds.Noclip end
-        return
-    end
-    
-    -- Generic extras: check all other configured binds
-    for actionName, bindName in pairs(Config.Keybinds) do
-        if actionName ~= "ToggleMenu" and actionName ~= "Fly" and actionName ~= "Noclip" then
-            local keyEnum = Enum.KeyCode[bindName]
-            if keyEnum and kc == keyEnum then
-                ToggleFeatureByName(actionName)
-                if KeybindButtons[actionName] then KeybindButtons[actionName].Text = Config.Keybinds[actionName] end
-                return
-            end
-        end
-    end
-end)
-
--- Robust humanoid stats maintainer: ensures WalkSpeed/JumpPower persist across games
-local function DisconnectStatMaintainer(humanoid)
-    if not humanoid then return end
-    if Connections.StatMaintainers and Connections.StatMaintainers[humanoid] then
-        local entry = Connections.StatMaintainers[humanoid]
-        if entry.conns then
-            for _, c in pairs(entry.conns) do pcall(function() c:Disconnect() end) end
-        end
-        if entry.heartbeat then pcall(function() entry.heartbeat:Disconnect() end) end
-        Connections.StatMaintainers[humanoid] = nil
-    end
-end
-
-local function ApplyToHumanoid(humanoid)
-    if not humanoid then return end
-    DisconnectStatMaintainer(humanoid)
-    -- Immediate apply
-    pcall(function() humanoid.WalkSpeed = Config.Speed end)
-    pcall(function() humanoid.UseJumpPower = true humanoid.JumpPower = Config.Jump end)
-
-    local entry = { conns = {}, heartbeat = nil }
-    -- Re-enforce when properties change
-    table.insert(entry.conns, humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
-        if humanoid and humanoid.WalkSpeed ~= Config.Speed then pcall(function() humanoid.WalkSpeed = Config.Speed end) end
-    end))
-    table.insert(entry.conns, humanoid:GetPropertyChangedSignal("JumpPower"):Connect(function()
-        if humanoid and humanoid.JumpPower ~= Config.Jump then pcall(function() humanoid.UseJumpPower = true humanoid.JumpPower = Config.Jump end) end
-    end))
-
-    -- Periodic reapply (safe frequency)
-    local acc = 0
-    entry.heartbeat = RunService.Heartbeat:Connect(function(dt)
-        acc = acc + dt
-        if acc >= 0.6 then
-            acc = 0
-            if humanoid then
-                pcall(function() humanoid.WalkSpeed = Config.Speed end)
-                pcall(function() humanoid.UseJumpPower = true humanoid.JumpPower = Config.Jump end)
-            end
-        end
-    end)
-
-    -- allow external reapply trigger
-    entry.reapply = function()
-        pcall(function() humanoid.WalkSpeed = Config.Speed end)
-        pcall(function() humanoid.UseJumpPower = true humanoid.JumpPower = Config.Jump end)
-    end
-
-    Connections.StatMaintainers = Connections.StatMaintainers or {}
-    Connections.StatMaintainers[humanoid] = entry
-end
-
--- Hook character events to apply maintainer
-Player.CharacterAdded:Connect(function(c)
-    wait(0.3)
-    local h = c:FindFirstChild("Humanoid") or c:FindFirstChildWhichIsA("Humanoid")
-    if h then ApplyToHumanoid(h) end
-    -- clean up when character removed
-    c.AncestryChanged:Connect(function(child, parent)
-        if not parent then
-            local h2 = child:FindFirstChild("Humanoid")
-            if h2 then DisconnectStatMaintainer(h2) end
-        end
-    end)
-end)
-
--- Apply immediately if character already exists
-if Player.Character then
-    local h = Player.Character:FindFirstChild("Humanoid") or Player.Character:FindFirstChildWhichIsA("Humanoid")
-    if h then ApplyToHumanoid(h) end
-end
-
--- Notification de succès (mise à jour)
-pcall(function()
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Universale OMEGA v2 (CHARGÉ)"; -- MODIFIÉ
-        Text = "Menu chargé instantanément. Utilise INSERT pour masquer/afficher.";
-        Duration = 5;
-    })
-end)
+CreateButton("Contact", "Discord : le_joueur_de_berock2009", function() setclipboard("le_joueur_de_berock2009")
