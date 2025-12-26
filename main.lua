@@ -4,9 +4,6 @@
 --  Modified: removed AutoFire feature and Kill Panel per request
 -- ═══════════════════════════════════════════════════════════
 
--- Wait for the game to load to avoid crashing (Using `wait()`)
-if not game:IsLoaded() then game.Loaded:Wait() end
-
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -467,7 +464,7 @@ CreateTab("Visuals", false)
 CreateTab("Teleport", false)
 CreateTab("Settings", false)
 CreateTab("Server", false)
-CreateTab("Autres", false)
+CreateTab("Auras", false)
 CreateTab("Contact", false)
 
 
@@ -1315,4 +1312,4 @@ CreateButton("Server", "Server Hop (Other server)", function()
 end)
 
 -- === CONTACT LOGIC ===
-CreateButton("Contact", "Discord : le_joueur_de_berock2009", function() setclipboard("le_joueur_de_berock2009")
+CreateButton("Contact", "Discord : beandagreat.", function() setclipboard("le_joueur_de_berock2009")
