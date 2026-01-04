@@ -832,3 +832,4 @@ end)
 
 -- Initialize Defaults
 UpdateThemes(CurrentConfig.Theme)
+print(beanhub loaded)
