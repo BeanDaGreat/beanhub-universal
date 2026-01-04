@@ -12,11 +12,13 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local Lighting = game:GetService("Lighting")
-local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
+
+-- Use PlayerGui instead of CoreGui
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 -- // FILESYSTEM & CONFIG //
 local ConfigName = "BeanHub_v2_Config.json"
@@ -35,7 +37,8 @@ local CurrentConfig = {
     ESP_Tracers = false,
     HitboxExpander = false,
     HitboxSize = 2,
-    FullBright = false
+    FullBright = false,
+    SpinBot = false
 }
 
 -- Safe File System Wrapper
@@ -102,42 +105,49 @@ local UI_Registry = {} -- Stores all UI objects to update them dynamically
 local CurrentTheme = Themes[CurrentConfig.Theme] or Themes["Bean Green"]
 
 local function UpdateThemes(newThemeName)
+    if not Themes[newThemeName] then return end
     CurrentConfig.Theme = newThemeName
     CurrentTheme = Themes[newThemeName]
     SaveSettings()
     
     for _, item in pairs(UI_Registry) do
         local instance = item.Instance
-        local type = item.Type
+        local typ = item.Type
         
-        -- Use Tween for smooth transition
-        if type == "Main" then
+        if typ == "Main" then
             TweenService:Create(instance, TweenInfo.new(0.5), {BackgroundColor3 = CurrentTheme.Main}):Play()
-        elseif type == "Secondary" then
+        elseif typ == "Secondary" then
             TweenService:Create(instance, TweenInfo.new(0.5), {BackgroundColor3 = CurrentTheme.Secondary}):Play()
-        elseif type == "Accent" then
+        elseif typ == "Accent" then
             if instance:IsA("TextLabel") or instance:IsA("TextButton") then
                 TweenService:Create(instance, TweenInfo.new(0.5), {TextColor3 = CurrentTheme.Accent}):Play()
             else
                 TweenService:Create(instance, TweenInfo.new(0.5), {BackgroundColor3 = CurrentTheme.Accent}):Play()
             end
-        elseif type == "Text" then
+        elseif typ == "Text" then
             TweenService:Create(instance, TweenInfo.new(0.5), {TextColor3 = CurrentTheme.Text}):Play()
-        elseif type == "TextDark" then
+        elseif typ == "TextDark" then
             TweenService:Create(instance, TweenInfo.new(0.5), {TextColor3 = CurrentTheme.TextDark}):Play()
-        elseif type == "ImageAccent" then
+        elseif typ == "ImageAccent" then
             TweenService:Create(instance, TweenInfo.new(0.5), {ImageColor3 = CurrentTheme.Accent}):Play()
+        elseif typ == "ToggleBG" then
+            -- update toggle color based on state if provided
+            local stateFn = item.State
+            if stateFn and instance and instance:IsA("Frame") then
+                local state = stateFn()
+                instance.BackgroundColor3 = state and CurrentTheme.Accent or Color3.fromRGB(60,60,60)
+            end
         end
     end
 end
 
 -- // UTILITY FUNCTIONS //
-local function AddToRegistry(instance, type)
-    table.insert(UI_Registry, {Instance = instance, Type = type})
+local function AddToRegistry(instance, typ, stateFn)
+    table.insert(UI_Registry, {Instance = instance, Type = typ, State = stateFn})
 end
 
 local function MakeDraggable(frame, dragHandle)
-    local dragging, dragInput, dragStart, startPos
+    local dragging, dragStart, startPos
     dragHandle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
@@ -161,12 +171,12 @@ local Library = {}
 
 function Library:Init()
     -- Cleanup Old UI
-    if CoreGui:FindFirstChild("BeanHubV2") then CoreGui.BeanHubV2:Destroy() end
+    if PlayerGui:FindFirstChild("BeanHubV2") then PlayerGui.BeanHubV2:Destroy() end
 
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "BeanHubV2"
     ScreenGui.IgnoreGuiInset = true
-    ScreenGui.Parent = CoreGui
+    ScreenGui.Parent = PlayerGui
 
     -- Loading Screen
     local LoadFrame = Instance.new("Frame")
@@ -236,7 +246,7 @@ function Library:Init()
     Title.Size = UDim2.new(1,0,0,60)
     Title.BackgroundTransparency = 1
     Title.Parent = Sidebar
-    AddToRegistry(Title, "Accent") -- Use Accent Color for Title
+    AddToRegistry(Title, "Accent")
 
     local Version = Instance.new("TextLabel")
     Version.Text = "v2.0"
@@ -291,7 +301,7 @@ function Library:CreateTab(Window, name, iconId)
     Button.TextSize = 14
     Button.TextXAlignment = Enum.TextXAlignment.Left
     Button.Parent = Window.Tabs
-    AddToRegistry(Button, "TextDark") -- Default state
+    AddToRegistry(Button, "TextDark")
 
     local Padding = Instance.new("UIPadding", Button)
     Padding.PaddingLeft = UDim.new(0,15)
@@ -303,7 +313,7 @@ function Library:CreateTab(Window, name, iconId)
     Page.ScrollBarImageColor3 = CurrentTheme.Accent
     Page.Visible = false
     Page.Parent = Window.Pages
-    AddToRegistry(Page, "ImageAccent") -- Scrollbar color
+    AddToRegistry(Page, "ImageAccent")
 
     local Layout = Instance.new("UIListLayout", Page)
     Layout.Padding = UDim.new(0,8)
@@ -313,14 +323,11 @@ function Library:CreateTab(Window, name, iconId)
         Page.CanvasSize = UDim2.new(0,0,0,Layout.AbsoluteContentSize.Y + 10)
     end)
 
-    -- Tab Selection Logic
     Button.MouseButton1Click:Connect(function()
-        -- Reset all tabs
         for _, v in pairs(Window.Pages:GetChildren()) do v.Visible = false end
         for _, v in pairs(Window.Tabs:GetChildren()) do 
             if v:IsA("TextButton") then
                 TweenService:Create(v, TweenInfo.new(0.2), {TextColor3 = CurrentTheme.TextDark}):Play()
-                -- Temporarily remove from specific registry tracking to manual override
             end
         end
         
@@ -372,7 +379,6 @@ function Library:CreateTab(Window, name, iconId)
         SwitchBg.Parent = Frame
         Instance.new("UICorner", SwitchBg).CornerRadius = UDim.new(0,10)
         
-        -- Special registry for toggles (dynamic color)
         local SwitchDot = Instance.new("Frame")
         SwitchDot.Size = UDim2.new(0,16,0,16)
         SwitchDot.Position = state and UDim2.new(1,-18,0.5,-8) or UDim2.new(0,2,0.5,-8)
@@ -400,8 +406,7 @@ function Library:CreateTab(Window, name, iconId)
             SaveSettings()
         end)
 
-        -- Allow external theme updates to affect the active state
-        table.insert(UI_Registry, {Instance = SwitchBg, Type = "ToggleBG", State = function() return CurrentConfig[configKey] end})
+        AddToRegistry(SwitchBg, "ToggleBG", function() return CurrentConfig[configKey] end)
         
         if state then callback(true) end
     end
@@ -552,7 +557,7 @@ function Library:CreateTab(Window, name, iconId)
         Btn.TextSize = 14
         Btn.Parent = Page
         AddToRegistry(Btn, "Secondary")
-        AddToRegistry(Btn, "Text") -- Text color also managed
+        AddToRegistry(Btn, "Text")
         Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,6)
 
         Btn.MouseButton1Click:Connect(function()
@@ -584,6 +589,7 @@ FOVCircle.Color = Color3.fromRGB(255,255,255)
 FOVCircle.Thickness = 1
 FOVCircle.Filled = false
 FOVCircle.Transparency = 1
+FOVCircle.Visible = false
 
 Tab_Combat:CreateSection("Aimbot")
 Tab_Combat:CreateToggle("Enable Aimbot", "Aimbot", function(v) FOVCircle.Visible = v end)
@@ -595,26 +601,29 @@ Tab_Combat:CreateSlider("Hitbox Size", 2, 20, "HitboxSize", function(v) end)
 
 -- Combat Loop
 RunService.RenderStepped:Connect(function()
-    FOVCircle.Position = UserInputService:GetMouseLocation()
-    if CurrentConfig.Aimbot then FOVCircle.Visible = true else FOVCircle.Visible = false end
+    -- Update FOV circle position
+    local mousePos = UserInputService:GetMouseLocation()
+    FOVCircle.Position = mousePos
+    FOVCircle.Visible = CurrentConfig.Aimbot
 
     -- Hitbox Expander Logic
     if CurrentConfig.HitboxExpander then
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                p.Character.HumanoidRootPart.Size = Vector3.new(CurrentConfig.HitboxSize, CurrentConfig.HitboxSize, CurrentConfig.HitboxSize)
-                p.Character.HumanoidRootPart.Transparency = 0.5
-                p.Character.HumanoidRootPart.CanCollide = false
+                local hrp = p.Character.HumanoidRootPart
+                pcall(function()
+                    hrp.Size = Vector3.new(CurrentConfig.HitboxSize, CurrentConfig.HitboxSize, CurrentConfig.HitboxSize)
+                    hrp.Transparency = 0.5
+                    hrp.CanCollide = false
+                end)
             end
         end
     end
 
-    -- Aimbot Logic
+    -- Aimbot Logic (right mouse)
     if CurrentConfig.Aimbot and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
         local closest = nil
         local maxDist = CurrentConfig.AimbotFOV
-        local mousePos = UserInputService:GetMouseLocation()
-        
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") and p.Character:FindFirstChild("Humanoid") then
                 if p.Character.Humanoid.Health > 0 then
@@ -630,11 +639,11 @@ RunService.RenderStepped:Connect(function()
             end
         end
         if closest then
-            TweenService:Create(Camera, TweenInfo.new(0.05, Enum.EasingStyle.Sine), {CFrame = CFrame.new(Camera.CFrame.Position, closest.Position)}):Play()
+            local targetCFrame = CFrame.new(Camera.CFrame.Position, closest.Position)
+            Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, math.clamp(0.1 * CurrentConfig.AimbotSmooth, 0, 1))
         end
     end
 end)
-
 
 -- --- VISUALS ---
 local ESP_Cache = {}
@@ -664,13 +673,11 @@ RunService.RenderStepped:Connect(function()
         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
             
             if not ESP_Cache[p] then
-                -- Create Drawings
                 ESP_Cache[p] = {
                     Box = Drawing.new("Square"),
                     Name = Drawing.new("Text"),
                     Tracer = Drawing.new("Line")
                 }
-                -- Setup defaults
                 ESP_Cache[p].Box.Color = Color3.fromRGB(255, 50, 50)
                 ESP_Cache[p].Box.Thickness = 1
                 ESP_Cache[p].Box.Filled = false
@@ -688,7 +695,6 @@ RunService.RenderStepped:Connect(function()
             local vector, onScreen = Camera:WorldToViewportPoint(hrp.Position)
             
             if onScreen then
-                -- Box
                 if CurrentConfig.ESP_Box then
                     cache.Box.Visible = true
                     local size = Vector2.new(2000 / vector.Z, 2500 / vector.Z)
@@ -698,7 +704,6 @@ RunService.RenderStepped:Connect(function()
                     cache.Box.Visible = false
                 end
                 
-                -- Name
                 if CurrentConfig.ESP_Name then
                     cache.Name.Visible = true
                     cache.Name.Text = p.Name
@@ -707,7 +712,6 @@ RunService.RenderStepped:Connect(function()
                     cache.Name.Visible = false
                 end
 
-                -- Tracer
                 if CurrentConfig.ESP_Tracers then
                     cache.Tracer.Visible = true
                     cache.Tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
@@ -739,26 +743,30 @@ Players.PlayerRemoving:Connect(function(p)
     end
 end)
 
-
 -- --- PLAYER ---
 Tab_Player:CreateSection("Movement")
 Tab_Player:CreateSlider("WalkSpeed", 16, 300, "WalkSpeed", function(v) 
-    if LocalPlayer.Character then LocalPlayer.Character.Humanoid.WalkSpeed = v end 
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = v
+    end 
 end)
 Tab_Player:CreateSlider("JumpPower", 50, 300, "JumpPower", function(v) 
-    if LocalPlayer.Character then LocalPlayer.Character.Humanoid.JumpPower = v end 
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.JumpPower = v
+    end 
 end)
 
 Tab_Player:CreateToggle("Flight (CFrame)", "Flight", function(v) end)
 Tab_Player:CreateSlider("Fly Speed", 10, 100, "FlySpeed", function(v) end)
 
 Tab_Player:CreateToggle("SpinBot", "SpinBot", function(v)
+    CurrentConfig.SpinBot = v
     if v then
-        local bg = Instance.new("BodyAngularVelocity")
-        bg.Name = "SpinBot"
-        bg.MaxTorque = Vector3.new(0, math.huge, 0)
-        bg.AngularVelocity = Vector3.new(0, 20, 0)
-        if LocalPlayer.Character and LocalPlayer.Character.PrimaryPart then
+        if LocalPlayer.Character and LocalPlayer.Character.PrimaryPart and not LocalPlayer.Character.PrimaryPart:FindFirstChild("SpinBot") then
+            local bg = Instance.new("BodyAngularVelocity")
+            bg.Name = "SpinBot"
+            bg.MaxTorque = Vector3.new(0, math.huge, 0)
+            bg.AngularVelocity = Vector3.new(0, 20, 0)
             bg.Parent = LocalPlayer.Character.PrimaryPart
         end
     else
@@ -768,68 +776,108 @@ Tab_Player:CreateToggle("SpinBot", "SpinBot", function(v)
     end
 end)
 
--- Flight Loop
-RunService.RenderStepped:Connect(function()
+-- Flight implementation (simple CFrame movement)
+local flyVelocity = Vector3.new(0,0,0)
+local flying = false
+local flyUp = false
+local flyDown = false
+
+UserInputService.InputBegan:Connect(function(input, g)
+    if g then return end
+    if input.KeyCode == Enum.KeyCode.Space then flyUp = true end
+    if input.KeyCode == Enum.KeyCode.LeftControl then flyDown = true end
+end)
+UserInputService.InputEnded:Connect(function(input, g)
+    if input.KeyCode == Enum.KeyCode.Space then flyUp = false end
+    if input.KeyCode == Enum.KeyCode.LeftControl then flyDown = false end
+end)
+
+RunService.RenderStepped:Connect(function(dt)
+    -- Apply WalkSpeed/JumpPower on character spawn
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = CurrentConfig.WalkSpeed
+        LocalPlayer.Character.Humanoid.JumpPower = CurrentConfig.JumpPower
+    end
+
+    -- Flight loop
     if CurrentConfig.Flight and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local hrp = LocalPlayer.Character.HumanoidRootPart
-        local cam = Camera.CFrame
-        local speed = CurrentConfig.FlySpeed
-        local velocity = Vector3.new(0,0,0)
-        
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then velocity = velocity + (cam.LookVector * speed) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then velocity = velocity - (cam.LookVector * speed) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then velocity = velocity - (cam.RightVector * speed) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then velocity = velocity + (cam.RightVector * speed) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then velocity = velocity + Vector3.new(0, speed, 0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then velocity = velocity - Vector3.new(0, speed, 0) end
-        
-        hrp.Velocity = Vector3.new(0,0,0)
-        hrp.CFrame = hrp.CFrame + (velocity * RunService.RenderStepped:Wait())
-    end
-    
-    -- Enforce Stats
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        if LocalPlayer.Character.Humanoid.WalkSpeed ~= CurrentConfig.WalkSpeed then
-            LocalPlayer.Character.Humanoid.WalkSpeed = CurrentConfig.WalkSpeed
+        flying = true
+        local camCFrame = Workspace.CurrentCamera.CFrame
+        local forward = camCFrame.LookVector
+        local right = camCFrame.RightVector
+        local moveVec = Vector3.new(0,0,0)
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVec = moveVec + Vector3.new(forward.X, 0, forward.Z) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveVec = moveVec - Vector3.new(forward.X, 0, forward.Z) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveVec = moveVec - Vector3.new(right.X, 0, right.Z) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveVec = moveVec + Vector3.new(right.X, 0, right.Z) end
+        if flyUp then moveVec = moveVec + Vector3.new(0,1,0) end
+        if flyDown then moveVec = moveVec - Vector3.new(0,1,0) end
+
+        if moveVec.Magnitude > 0 then
+            moveVec = moveVec.Unit * (CurrentConfig.FlySpeed or CurrentConfig.FlySpeed)
+            hrp.CFrame = hrp.CFrame + moveVec * dt
         end
-        if LocalPlayer.Character.Humanoid.JumpPower ~= CurrentConfig.JumpPower then
-            LocalPlayer.Character.Humanoid.JumpPower = CurrentConfig.JumpPower
-        end
+    else
+        flying = false
     end
 end)
 
+-- Ensure spinbot removed on respawn if disabled
+Players.LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    if CurrentConfig.SpinBot and char.PrimaryPart and not char.PrimaryPart:FindFirstChild("SpinBot") then
+        local bg = Instance.new("BodyAngularVelocity")
+        bg.Name = "SpinBot"
+        bg.MaxTorque = Vector3.new(0, math.huge, 0)
+        bg.AngularVelocity = Vector3.new(0, 20, 0)
+        bg.Parent = char.PrimaryPart
+    end
+    if char:FindFirstChild("Humanoid") then
+        char.Humanoid.WalkSpeed = CurrentConfig.WalkSpeed
+        char.Humanoid.JumpPower = CurrentConfig.JumpPower
+    end
+end)
 
--- --- THEMES ---
+-- --- THEMES TAB ---
 Tab_Themes:CreateSection("Select Theme")
-Tab_Themes:CreateDropdown("Choose Theme", {"Bean Green", "Midnight Blue", "Crimson Void", "Royal Purple", "Cotton Candy"}, function(val)
-    UpdateThemes(val)
+local themeNames = {}
+for name,_ in pairs(Themes) do table.insert(themeNames, name) end
+Tab_Themes:CreateDropdown("Theme", themeNames, function(opt)
+    UpdateThemes(opt)
 end)
 
-Tab_Themes:CreateButton("Unload Cheat", function()
-    ScreenGui:Destroy()
-    FOVCircle:Remove()
-    for _, v in pairs(ESP_Cache) do
-        v.Box:Remove()
-        v.Name:Remove()
-        v.Tracer:Remove()
+-- --- MISC TAB ---
+Tab_Misc:CreateSection("Config")
+Tab_Misc:CreateButton("Save Settings", function() SaveSettings() end)
+Tab_Misc:CreateButton("Load Settings", function() LoadSettings() UpdateThemes(CurrentConfig.Theme) end)
+Tab_Misc:CreateButton("Unload UI", function()
+    -- Destroy UI
+    if PlayerGui:FindFirstChild("BeanHubV2") then
+        PlayerGui.BeanHubV2:Destroy()
     end
 end)
 
--- --- MISC ---
-Tab_Misc:CreateSection("Utilities")
-Tab_Misc:CreateButton("Rejoin Server", function()
-    game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
-end)
-
-Tab_Misc:CreateToggle("Anti-AFK", "AntiAFK", function(v)
-    if v then
-        LocalPlayer.Idled:Connect(function()
-            game:GetService("VirtualUser"):CaptureController()
-            game:GetService("VirtualUser"):ClickButton2(Vector2.new())
-        end)
-    end
-end)
-
--- Initialize Defaults
+-- Finalize theme application to registered items
 UpdateThemes(CurrentConfig.Theme)
-print(beanhub loaded)
+
+-- Cleanup on script disable (optional)
+local function Cleanup()
+    for p, cache in pairs(ESP_Cache) do
+        if cache.Box then pcall(function() cache.Box:Remove() end) end
+        if cache.Name then pcall(function() cache.Name:Remove() end) end
+        if cache.Tracer then pcall(function() cache.Tracer:Remove() end) end
+    end
+    ESP_Cache = {}
+    SaveSettings()
+end
+
+-- Bind cleanup to player leaving
+Players.PlayerRemoving:Connect(function(p)
+    if p == LocalPlayer then
+        Cleanup()
+    end
+end)
+print('bean hub loaded. aimbot doeesnt work properly soo waif for an update join our discord to get notified. make with <3 By bean. 
+this script is a full recode of the original bean hub dm me on discord to get the previos virsion  ')
