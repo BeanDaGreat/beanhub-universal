@@ -1,242 +1,288 @@
---[[
-    FRESH HUB - ULTIMATE MASTER SCRIPT
-    Converted to Fluent UI | 70+ Features | Bug-Fixed
-]]
+-- Script taken from https://xenoscripts.com website --
 
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+-- SCRIPT COMPLET RAYFIELD UI - ESP + SPINBOT + TP/KILL PLAYER + FREECAM + NOCLIP + PLUS
 
--- // SERVICES // --
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local Lighting = game:GetService("Lighting")
-local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
-
--- // VARIABLES // --
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
 local Camera = workspace.CurrentCamera
-local TargetPart = nil
 
--- // SETTINGS TABLE // --
-local S = {
-    -- Combat
-    Aimbot = false, SilentAim = false, TeamCheck = false, WallCheck = false,
-    Smoothness = 1, FOV = 150, ShowFOV = false, AimPart = "Head", 
-    HitChance = 100, Triggerbot = false,
-    -- Visuals
-    ESP = false, Boxes = false, Names = false, Tracers = false, DistESP = false,
-    MaxDist = 3000, BoxColor = Color3.fromRGB(255, 0, 0),
-    -- Movement
-    Speed = 16, Jump = 50, Fly = false, FlySpeed = 50, NoClip = false, 
-    InfJump = false, Spinbot = false, AntiAFK = true,
-    -- World
-    Fullbright = false, ClockTime = 12, Gravity = 196.2, NoFog = false
+local ESP_Enabled = false
+local ESP_Objects = {}
+local spinbotEnabled = false
+local spinbotSpeed = 10
+local FreecamEnabled = false
+local NoClipEnabled = false
+local InfiniteJumpEnabled = false
+local WalkspeedEnabled = false
+local WalkspeedValue = 16
+
+local ESP_Settings = {
+    Box = false,
+    BoxFilled = false,
+    Skeleton = false,
+    Snapline = false,
+    Name = false,
+    Distance = false,
+    BoxColor = Color3.fromRGB(255, 0, 0),
+    BoxFilledColor = Color3.fromRGB(255, 0, 0),
+    SkeletonColor = Color3.fromRGB(0, 149, 255),
+    SnaplineColor = Color3.fromRGB(134, 255, 0),
+    NameColor = Color3.fromRGB(255, 255, 255),
+    DistanceColor = Color3.fromRGB(255, 111, 0),
+    SnaplineDistance = 100
 }
 
--- // UI SETUP // --
-local Window = Fluent:CreateWindow({
-    Title = "BeanHub",
-    SubTitle = "Universal v0.0.2",
-    TabWidth = 160,
-    Size = UDim2.fromOffset(580, 460),
-    Acrylic = true,
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.RightControl
-})
-
-local Tabs = {
-    Combat = Window:AddTab({ Title = "Combat", Icon = "crosshair" }),
-    Visuals = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
-    Movement = Window:AddTab({ Title = "Movement", Icon = "zap" }),
-    World = Window:AddTab({ Title = "World", Icon = "globe" }),
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
-}
-
--- // 1. COMBAT TAB // --
-local CombatS = Tabs.Combat:AddSection("Aimbot Settings")
-CombatS:AddToggle("Aimbot", {Title = "Main Aimbot", Default = false}):OnChanged(function(v) S.Aimbot = v end)
-CombatS:AddToggle("TeamCheck", {Title = "Team Check", Default = false}):OnChanged(function(v) S.TeamCheck = v end)
-CombatS:AddToggle("WallCheck", {Title = "Wall Check", Default = false}):OnChanged(function(v) S.WallCheck = v end)
-CombatS:AddSlider("Smoothness", {Title = "Smoothing", Default = 1, Min = 1, Max = 20, Callback = function(v) S.Smoothness = v end})
-CombatS:AddSlider("FOV", {Title = "FOV Radius", Default = 150, Min = 10, Max = 800, Callback = function(v) S.FOV = v end})
-CombatS:AddToggle("ShowFOV", {Title = "Show FOV", Default = false}):OnChanged(function(v) S.ShowFOV = v end)
-CombatS:AddDropdown("AimPart", {Title = "Aim Part", Values = {"Head", "UpperTorso", "HumanoidRootPart"}, Default = "Head", Callback = function(v) S.AimPart = v end})
-
--- // 2. VISUALS TAB // --
-local VisS = Tabs.Visuals:AddSection("Player ESP")
-VisS:AddToggle("ESPMaster", {Title = "Enable ESP", Default = false}):OnChanged(function(v) S.ESP = v end)
-VisS:AddToggle("Boxes", {Title = "Boxes", Default = false}):OnChanged(function(v) S.Boxes = v end)
-VisS:AddToggle("Names", {Title = "Names", Default = false}):OnChanged(function(v) S.Names = v end)
-VisS:AddToggle("Tracers", {Title = "Tracers", Default = false}):OnChanged(function(v) S.Tracers = v end)
-VisS:AddSlider("MaxDist", {Title = "Max Distance", Default = 3000, Min = 100, Max = 10000, Callback = function(v) S.MaxDist = v end})
-
--- // 3. MOVEMENT TAB // --
-local MoveS = Tabs.Movement:AddSection("Modifications")
-MoveS:AddSlider("Speed", {Title = "WalkSpeed", Default = 16, Min = 16, Max = 250, Callback = function(v) S.Speed = v end})
-MoveS:AddSlider("Jump", {Title = "JumpPower", Default = 50, Min = 50, Max = 300, Callback = function(v) S.Jump = v end})
-MoveS:AddToggle("Fly", {Title = "Fly (W/A/S/D)", Default = false}):OnChanged(function(v) S.Fly = v end)
-MoveS:AddSlider("FlySpeed", {Title = "Fly Speed", Default = 50, Min = 10, Max = 200, Callback = function(v) S.FlySpeed = v end})
-MoveS:AddToggle("NoClip", {Title = "NoClip", Default = false}):OnChanged(function(v) S.NoClip = v end)
-MoveS:AddToggle("InfJump", {Title = "Infinite Jump", Default = false}):OnChanged(function(v) S.InfJump = v end)
-
--- // 4. WORLD TAB // --
-local WorldS = Tabs.World:AddSection("Environment")
-WorldS:AddToggle("Fullbright", {Title = "Fullbright", Default = false}):OnChanged(function(v) S.Fullbright = v end)
-WorldS:AddSlider("Time", {Title = "Clock Time", Default = 12, Min = 0, Max = 24, Callback = function(v) S.ClockTime = v end})
-WorldS:AddSlider("Gravity", {Title = "Gravity", Default = 196.2, Min = 0, Max = 196.2, Callback = function(v) workspace.Gravity = v end})
-WorldS:AddButton({Title = "Server Hop", Callback = function() 
-    local Servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100")).data
-    for _, s in pairs(Servers) do if s.playing < s.maxPlayers and s.id ~= game.JobId then TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id) end end
-end})
-
--- // CORE LOGIC FUNCTIONS // --
-
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Thickness = 1
-FOVCircle.Color = Color3.fromRGB(255, 255, 255)
-FOVCircle.Filled = false
-
-local function IsVisible(part)
-    local ray = RaycastParams.new()
-    ray.FilterType = Enum.RaycastFilterType.Exclude
-    ray.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
-    local result = workspace:Raycast(Camera.CFrame.Position, (part.Position - Camera.CFrame.Position).Unit * 1000, ray)
-    return result == nil or result.Instance:IsDescendantOf(part.Parent)
+function ClearESP()
+    for _, obj in pairs(ESP_Objects) do
+        if typeof(obj) == "table" then
+            for _, part in pairs(obj) do if part.Destroy then part:Destroy() end end
+        elseif obj.Destroy then obj:Destroy() end
+    end
+    ESP_Objects = {}
 end
 
-local function GetClosestPlayer()
-    local target = nil
-    local dist = S.FOV
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
-            if S.TeamCheck and p.Team == LocalPlayer.Team then continue end
-            local part = p.Character:FindFirstChild(S.AimPart)
-            if part then
-                local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
-                if onScreen then
-                    local mag = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
-                    if mag < dist then
-                        if S.WallCheck and not IsVisible(part) then continue end
-                        target = part
-                        dist = mag
-                    end
-                end
+function CreateESP(player)
+    local box = Drawing.new("Square") box.Visible = false
+    local name = Drawing.new("Text") name.Visible = false name.Size = 14 name.Center = true name.Outline = true
+    local dist = Drawing.new("Text") dist.Visible = false dist.Size = 13 dist.Center = true dist.Outline = true
+    local snap = Drawing.new("Line") snap.Visible = false snap.Thickness = 1
+    local skeletonParts = {}
+    ESP_Objects[player.Name] = {box, name, dist, snap, skeletonParts}
+
+    RunService.RenderStepped:Connect(function()
+        if not ESP_Enabled or not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
+            box.Visible = false name.Visible = false dist.Visible = false snap.Visible = false
+            return
+        end
+
+        local root = player.Character.HumanoidRootPart
+        local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
+        if onScreen then
+            local distance = (Camera.CFrame.Position - root.Position).Magnitude
+            local size = math.clamp(1000 / distance, 10, 100)
+            local boxSize = Vector2.new(size * 1.5, size * 2)
+            local boxPos = Vector2.new(pos.X - boxSize.X / 2, pos.Y - boxSize.Y / 2)
+
+            box.Position = boxPos
+            box.Size = boxSize
+            box.Color = ESP_Settings.BoxColor
+            box.Filled = ESP_Settings.BoxFilled
+            box.Transparency = 1
+            box.Visible = ESP_Settings.Box or ESP_Settings.BoxFilled
+
+            name.Position = Vector2.new(pos.X, pos.Y - boxSize.Y / 2 - 16)
+            name.Text = player.Name
+            name.Color = ESP_Settings.NameColor
+            name.Visible = ESP_Settings.Name
+
+            dist.Position = Vector2.new(pos.X, pos.Y + boxSize.Y / 2 + 2)
+            dist.Text = math.floor(distance) .. " studs"
+            dist.Color = ESP_Settings.DistanceColor
+            dist.Visible = ESP_Settings.Distance
+
+            snap.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+            snap.To = Vector2.new(pos.X, pos.Y)
+            snap.Color = ESP_Settings.SnaplineColor
+            snap.Visible = ESP_Settings.Snapline and distance <= ESP_Settings.SnaplineDistance
+        else
+            box.Visible = false
+            name.Visible = false
+            dist.Visible = false
+            snap.Visible = false
+        end
+    end)
+end
+
+function RefreshESPPlayers()
+    ClearESP()
+    if ESP_Enabled then
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer then
+                CreateESP(plr)
             end
         end
     end
-    return target
 end
 
--- // ESP SYSTEM // --
-local ESP_Manager = {}
-local function AddESP(Player)
-    local Box = Drawing.new("Square")
-    local Name = Drawing.new("Text")
-    local Line = Drawing.new("Line")
-
-    local function Update()
-        local c
-        c = RunService.RenderStepped:Connect(function()
-            if S.ESP and Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") and Player.Character:FindFirstChild("Humanoid").Health > 0 then
-                local HRP = Player.Character.HumanoidRootPart
-                local Pos, OnScreen = Camera:WorldToViewportPoint(HRP.Position)
-                local Distance = (Camera.CFrame.Position - HRP.Position).Magnitude
-
-                if OnScreen and Distance < S.MaxDist then
-                    local Size = 2000 / Pos.Z
-                    if S.Boxes then
-                        Box.Visible = true; Box.Size = Vector2.new(Size, Size * 1.5)
-                        Box.Position = Vector2.new(Pos.X - Size/2, Pos.Y - (Size * 1.5)/2)
-                        Box.Color = Color3.fromRGB(255, 0, 0)
-                    else Box.Visible = false end
-
-                    if S.Names then
-                        Name.Visible = true; Name.Text = Player.Name .. " ["..math.floor(Distance).."m]"
-                        Name.Position = Vector2.new(Pos.X, Pos.Y - (Size) - 10); Name.Center = true; Name.Size = 14
-                    else Name.Visible = false end
-
-                    if S.Tracers then
-                        Line.Visible = true; Line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-                        Line.To = Vector2.new(Pos.X, Pos.Y); Line.Color = Color3.fromRGB(255, 0, 0)
-                    else Line.Visible = false end
-                else
-                    Box.Visible = false; Name.Visible = false; Line.Visible = false
-                end
-            else
-                Box.Visible = false; Name.Visible = false; Line.Visible = false
-                if not Player.Parent then Box:Remove(); Name:Remove(); Line:Remove(); c:Disconnect() end
-            end
-        end)
-    end
-    coroutine.wrap(Update)()
+function ToggleESP(enabled)
+    ESP_Enabled = enabled
+    RefreshESPPlayers()
 end
-
--- // MAIN LOOPS // --
 
 RunService.RenderStepped:Connect(function()
-    FOVCircle.Visible = S.ShowFOV
-    FOVCircle.Radius = S.FOV
-    FOVCircle.Position = UserInputService:GetMouseLocation()
-
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = S.Speed
-        LocalPlayer.Character.Humanoid.JumpPower = S.Jump
-        
-        if S.Fly then
-            local HRP = LocalPlayer.Character.HumanoidRootPart
-            local Dir = Vector3.new(0, 0.1, 0)
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then Dir = Dir + (Camera.CFrame.LookVector * S.FlySpeed) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then Dir = Dir - (Camera.CFrame.LookVector * S.FlySpeed) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then Dir = Dir - (Camera.CFrame.RightVector * S.FlySpeed) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then Dir = Dir + (Camera.CFrame.RightVector * S.FlySpeed) end
-            HRP.Velocity = Dir
-        end
-    end
-
-    if S.Aimbot then
-        local Target = GetClosestPlayer()
-        if Target and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, Target.Position), 1/S.Smoothness)
-        end
-    end
-
-    if S.Fullbright then
-        Lighting.Brightness = 2
-        Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+    if spinbotEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(spinbotSpeed), 0)
     end
 end)
 
 RunService.Stepped:Connect(function()
-    if S.NoClip and LocalPlayer.Character then
+    if NoClipEnabled and LocalPlayer.Character then
         for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
-            if v:IsA("BasePart") then v.CanCollide = false end
+            if v:IsA("BasePart") and v.CanCollide then
+                v.CanCollide = false
+            end
         end
     end
 end)
 
 UserInputService.JumpRequest:Connect(function()
-    if S.InfJump and LocalPlayer.Character then
-        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+    if InfiniteJumpEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
     end
 end)
 
--- Initialization
-for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer then AddESP(p) end end
-Players.PlayerAdded:Connect(AddESP)
+local Window = Rayfield:CreateWindow({
+    Name = "MatrixLab - Universal Script",
+    Icon = 0,
+    LoadingTitle = "Chargement...",
+    LoadingSubtitle = "By MatrixLab",
+    ShowText = "MatrixLab",
+    Theme = "Serenity",
 
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({})
-InterfaceManager:SetFolder("FreshHub")
-SaveManager:SetFolder("BeanHub/configs")
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
-Window:SelectTab(1)
-SaveManager:LoadAutoloadConfig()
+    ToggleUIKeybind = "K",
 
-Fluent:Notify({ Title = "BeanHub", Content = "Script Loaded Successfully. Key: RightCtrl", Duration = 5 })
+    DisableRayfieldPrompts = false,
+    DisabledBuildWarning = false,
+})
+
+local mainTab = Window:CreateTab("Main", 4483362458)
+local espTab = Window:CreateTab("ESP", 4483362458)
+local espColorTab = Window:CreateTab("ESP Color", 4483362458)
+local miscTab = Window:CreateTab("Misc", 4483362458)
+local playerTab = Window:CreateTab("Player", 4483362458)
+local onlineTab = Window:CreateTab("Online", 4483362458)
+local supporterTab = Window:CreateTab("Supporter", 4483362458)
+
+mainTab:CreateParagraph({Title = "Coming Soon", Content = "..."})
+supporterTab:CreateParagraph({Title = "Developers", Content = "Dev: @spacyxx, @RC_Pain"})
+
+espTab:CreateToggle({Name = "Enable ESP", CurrentValue = false, Callback = ToggleESP})
+espTab:CreateToggle({Name = "Box", CurrentValue = false, Callback = function(v) ESP_Settings.Box = v end})
+espTab:CreateToggle({Name = "Box Filled", CurrentValue = false, Callback = function(v) ESP_Settings.BoxFilled = v end})
+espTab:CreateToggle({Name = "Name", CurrentValue = false, Callback = function(v) ESP_Settings.Name = v end})
+espTab:CreateToggle({Name = "Distance", CurrentValue = false, Callback = function(v) ESP_Settings.Distance = v end})
+espTab:CreateToggle({Name = "Snapline", CurrentValue = false, Callback = function(v) ESP_Settings.Snapline = v end})
+espTab:CreateSlider({Name = "Snapline Distance", Range = {50, 1000}, Increment = 10, CurrentValue = 100, Callback = function(v) ESP_Settings.SnaplineDistance = v end})
+espTab:CreateButton({Name = "🔁 Refresh ESP Players", Callback = RefreshESPPlayers})
+
+for name, _ in pairs(ESP_Settings) do
+    if tostring(name):find("Color") then
+        espColorTab:CreateColorPicker({Name = name, Color = ESP_Settings[name], Callback = function(v) ESP_Settings[name] = v end})
+    end
+end
+
+miscTab:CreateToggle({Name = "Spinbot", CurrentValue = false, Callback = function(v) spinbotEnabled = v end})
+miscTab:CreateSlider({Name = "Spinbot Speed", Range = {1, 50}, Increment = 1, Suffix = "°/frame", CurrentValue = 10, Callback = function(v) spinbotSpeed = v end})
+
+playerTab:CreateToggle({Name = "NoClip", CurrentValue = false, Callback = function(v) NoClipEnabled = v end})
+playerTab:CreateToggle({Name = "Infinite Jump", CurrentValue = false, Callback = function(v) InfiniteJumpEnabled = v end})
+
+local playerList = {}
+
+function RefreshPlayerList()
+    table.clear(playerList)
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            table.insert(playerList, p.Name)
+        end
+    end
+end
+
+RefreshPlayerList()
+
+local TPDropdown = onlineTab:CreateDropdown({
+    Name = "TP to Player",
+    Options = playerList,
+    CurrentOption = "",
+    Callback = function(v)
+        local target = Players:FindFirstChild(v)
+        if target and target.Character and LocalPlayer.Character then
+            LocalPlayer.Character:PivotTo(target.Character:GetPivot())
+        end
+    end
+})
+
+local KillDropdown = onlineTab:CreateDropdown({
+    Name = "Kill Player",
+    Options = playerList,
+    CurrentOption = "",
+    Callback = function(v)
+        local target = Players:FindFirstChild(v)
+        if target and target.Character and target.Character:FindFirstChild("Humanoid") then
+            target.Character.Humanoid.Health = 0
+        end
+    end
+})
+
+onlineTab:CreateButton({
+    Name = "🔁 Refresh Player List",
+    Callback = function()
+        RefreshPlayerList()
+        TPDropdown:SetOptions(playerList)
+        KillDropdown:SetOptions(playerList)
+    end
+})
+
+onlineTab:CreateButton({
+    Name = "🚀 TP All Players To Me",
+    Callback = function()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local root = player.Character:FindFirstChild("HumanoidRootPart")
+                local localRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if root and localRoot then
+                    root.CFrame = localRoot.CFrame + Vector3.new(math.random(-5,5), 0, math.random(-5,5))
+                end
+            end
+        end
+    end
+})
+
+onlineTab:CreateButton({
+    Name = "💀 Kill All Players",
+    Callback = function()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") then
+                player.Character.Humanoid.Health = 0
+            end
+        end
+    end
+})
+
+local WalkspeedEnabled = false
+local WalkspeedValue = 16
+
+playerTab:CreateSlider({
+    Name = "Walkspeed",
+    Range = {16, 150},
+    Increment = 1,
+    Suffix = "Speed",
+    CurrentValue = 16,
+    Flag = "WalkSpeedSlider",
+    Callback = function(Value)
+        WalkspeedValue = Value
+        if WalkspeedEnabled then
+            local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.WalkSpeed = WalkspeedValue
+            end
+        end
+    end,
+})
+
+playerTab:CreateToggle({
+    Name = "Active WalkSpeed",
+    CurrentValue = false,
+    Flag = "ActiveWalkSpeed",
+    Callback = function(Value)
+        WalkspeedEnabled = Value
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed = Value and WalkspeedValue or 16
+        end
+    end,
+})
